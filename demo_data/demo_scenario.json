@@ -1,0 +1,90 @@
+{
+  "spill_event": {
+    "spill_id": "SPILL_001",
+    "timestamp": "2026-09-01T12:30:00Z",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [72.44, 18.11],
+          [72.47, 18.11],
+          [72.48, 18.14],
+          [72.45, 18.15],
+          [72.44, 18.11]
+        ]
+      ]
+    },
+    "area_km2": 4.2,
+    "centroid": {"lat": 18.123, "lon": 72.456},
+    "confidence": 0.92,
+    "estimated_age_hours": 4.0
+  },
+  "hindcast": {
+    "origin_estimate": {
+      "point": {"lat": 18.100, "lon": 72.400},
+      "time": "2026-09-01T08:15:00Z",
+      "time_window": ["2026-09-01T06:00:00Z", "2026-09-01T10:00:00Z"],
+      "confidence": 0.68
+    }
+  },
+  "drift": {
+    "forecast": [
+      {"timestamp": "2026-09-01T12:30:00Z", "point": {"lat": 18.123, "lon": 72.456}},
+      {"timestamp": "2026-09-01T14:30:00Z", "point": {"lat": 18.130, "lon": 72.470}},
+      {"timestamp": "2026-09-01T16:30:00Z", "point": {"lat": 18.140, "lon": 72.500}},
+      {"timestamp": "2026-09-01T18:30:00Z", "point": {"lat": 18.145, "lon": 72.520}},
+      {"timestamp": "2026-09-01T22:30:00Z", "point": {"lat": 18.150, "lon": 72.540}},
+      {"timestamp": "2026-09-02T04:30:00Z", "point": {"lat": 18.165, "lon": 72.580}}
+    ]
+  },
+  "ais": {
+    "vessel_tracks": [
+      {
+        "mmsi": 412345678,
+        "name": "Vessel A (Tanker)",
+        "type": "Tanker",
+        "path": [
+          {"timestamp": "2026-09-01T06:00:00Z", "lat": 18.050, "lon": 72.350, "heading": 45},
+          {"timestamp": "2026-09-01T08:00:00Z", "lat": 18.090, "lon": 72.390, "heading": 45},
+          {"timestamp": "2026-09-01T08:15:00Z", "lat": 18.100, "lon": 72.400, "heading": 90},
+          {"timestamp": "2026-09-01T09:00:00Z", "lat": 18.100, "lon": 72.405, "heading": 90},
+          {"timestamp": "2026-09-01T12:30:00Z", "lat": 18.135, "lon": 72.440, "heading": 45},
+          {"timestamp": "2026-09-02T04:30:00Z", "lat": 18.180, "lon": 72.490, "heading": 45}
+        ]
+      },
+      {
+        "mmsi": 987654321,
+        "name": "Vessel B (Cargo)",
+        "type": "Cargo",
+        "path": [
+          {"timestamp": "2026-09-01T06:00:00Z", "lat": 18.200, "lon": 72.300, "heading": 135},
+          {"timestamp": "2026-09-01T08:00:00Z", "lat": 18.160, "lon": 72.360, "heading": 135},
+          {"timestamp": "2026-09-01T10:00:00Z", "lat": 18.120, "lon": 72.420, "heading": 135},
+          {"timestamp": "2026-09-01T12:30:00Z", "lat": 18.090, "lon": 72.460, "heading": 135},
+          {"timestamp": "2026-09-02T04:30:00Z", "lat": 18.000, "lon": 72.600, "heading": 135}
+        ]
+      }
+    ]
+  },
+  "attribution": {
+    "candidates": [
+      {
+        "mmsi": 412345678,
+        "name": "Vessel A (Tanker)",
+        "score": 0.85,
+        "evidence": {
+          "proximity_score": 0.92,
+          "trajectory_score": 0.88,
+          "anomaly_score": 0.75
+        },
+        "reasoning_agent_report": "Agent Analysis: High suspicion level. Vessel A (Tanker) was detected within 0.5 km of the hindcasted spill origin point exactly at 08:15Z. The AIS logs indicate a sharp anomalous course deviation (from 45° to 90°) accompanied by a sudden drop in speed from 12 knots to 2 knots for a duration of 45 minutes inside the origin window. Furthermore, the forward drift simulation of the oil slick perfectly aligns with the vessel's wake trajectory."
+      }
+    ]
+  },
+  "sar_metadata": {
+    "image_url": "http://localhost:8000/demo_data/palsar_0.png",
+    "sensor": "ALOS PALSAR / Sentinel-1 SAR",
+    "resolution": "12.5m pixel spacing",
+    "reason": "Deep-learning U-Net detected high-contrast dark radar backscatter depression (-9.4 dB dampening). Capillary and short-gravity surface waves are dampened by viscous hydrocarbon film, producing specular reflection away from satellite radar sensor. Morphological continuity verifies active petroleum discharge rather than biogenic look-alike."
+  }
+}

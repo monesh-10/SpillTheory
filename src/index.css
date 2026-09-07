@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    overflow-x: hidden;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Root color defaults */
+  body {
+    background-color: #050B14;
+    color: #F8FAFC;
+  }
+
+  ::selection {
+    background-color: #00E5FF;
+    color: #050B14;
+  }
+}
+
+/* ========================================================= */
+/* Map & Chart Styling for Cyber-Maritime Tactical Command   */
+/* ========================================================= */
+.leaflet-container {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: #050B14 !important;
+}
+
+/* Dark Ocean Satellite Tile Filter (matching media_1788793921660.png) */
+.leaflet-tile {
+  filter: brightness(0.75) contrast(1.25) saturate(1.1);
+}
+
+/* Light Mode Tile Filter (Warm Natural Alabaster) */
+html:not(.dark) .leaflet-tile {
+  filter: brightness(0.98) contrast(1.02) sepia(0.08);
+}
+
+/* Leaflet Zoom Control: Dark Mode */
+.dark .leaflet-bar {
+  background-color: #272E36 !important;
+  border: 1px solid #4A4A4A !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .leaflet-bar a {
+  background-color: #272E36 !important;
+  color: #CBCBCB !important;
+  border-bottom: 1px solid #4A4A4A !important;
+  transition: all 0.15s ease;
+}
+
+.dark .leaflet-bar a:hover {
+  background-color: #353D46 !important;
+  color: #6D8196 !important;
+}
+
+/* Leaflet Zoom Control: Light Mode */
+html:not(.dark) .leaflet-bar {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBCBCB !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(74, 74, 74, 0.08) !important;
+}
+
+html:not(.dark) .leaflet-bar a {
+  background-color: #FFFFFF !important;
+  color: #4A4A4A !important;
+  border-bottom: 1px solid #EAEAD6 !important;
+  transition: all 0.15s ease;
+}
+
+html:not(.dark) .leaflet-bar a:hover {
+  background-color: #FFFFE3 !important;
+  color: #6D8196 !important;
+}
+
+/* Custom Clean Hairline Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: #171B1F;
+}
+
+html:not(.dark) .custom-scrollbar::-webkit-scrollbar-track {
+  background: #FFFFE3;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3A4450;
+  border-radius: 3px;
+}
+
+html:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBCBCB;
+  border-radius: 3px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6D8196;
+}
+
+html:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6D8196;
+}
+
+/* Minimal Map Tooltip: Dark Mode */
+.dark .leaflet-tooltip {
+  background: #272E36 !important;
+  border: 1px solid #4A4A4A !important;
+  border-radius: 6px !important;
+  color: #FFFFE3 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5) !important;
+  padding: 5px 9px !important;
+}
+
+.dark .leaflet-tooltip-top:before,
+.dark .leaflet-tooltip-bottom:before,
+.dark .leaflet-tooltip-left:before,
+.dark .leaflet-tooltip-right:before {
+  border-top-color: #272E36 !important;
+  border-bottom-color: #272E36 !important;
+  border-left-color: #272E36 !important;
+  border-right-color: #272E36 !important;
+}
+
+/* Minimal Map Tooltip: Light Mode */
+html:not(.dark) .leaflet-tooltip {
+  background: #FFFFE3 !important;
+  border: 1px solid #CBCBCB !important;
+  border-radius: 6px !important;
+  color: #4A4A4A !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 14px rgba(74, 74, 74, 0.1) !important;
+  padding: 5px 9px !important;
+}
+
+html:not(.dark) .leaflet-tooltip-top:before,
+html:not(.dark) .leaflet-tooltip-bottom:before,
+html:not(.dark) .leaflet-tooltip-left:before,
+html:not(.dark) .leaflet-tooltip-right:before {
+  border-top-color: #FFFFE3 !important;
+  border-bottom-color: #FFFFE3 !important;
+  border-left-color: #FFFFE3 !important;
+  border-right-color: #FFFFE3 !important;
+}
+
+
