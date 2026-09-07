@@ -1,4 +1,4 @@
-﻿# AquaSentinel-4D · Cyber-Maritime Tactical Command Center
+# SpillTheory (AquaSentinel-4D) · Cyber-Maritime Tactical Command Center
 
 > **Autonomous AI-Driven Marine Oil Spill Intelligence, Satellite SAR Delineation, Lagrangian Backtracking & AIS Vessel Attribution Platform**
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-**AquaSentinel-4D** (SpillTheory) is an end-to-end maritime defense and environmental response tactical command platform. It merges C-Band/L-Band Synthetic Aperture Radar (SAR) satellite imagery with deep-learning neural segmentation, real-time MetOcean hydrodynamic drift modeling, and automated AIS vessel attribution to identify marine pollution incidents and hold polluters accountable.
+**SpillTheory** is an end-to-end maritime defense and environmental response tactical command platform. It merges C-Band/L-Band Synthetic Aperture Radar (SAR) satellite imagery with deep-learning neural segmentation, real-time MetOcean hydrodynamic drift modeling, and automated AIS vessel attribution to identify marine pollution incidents and hold polluters accountable.
 
 ### Key Capabilities
 
@@ -15,7 +15,7 @@
    - U-Net convolutional neural network segmentation for capillary wave suppression zones.
    - **Interactive Coherence Viewer**: 1:1 pixel-accurate split-screen comparison slider between raw radar backscatter and binary oil slick masks.
    - **Coordinate Geo-Anchoring**: Precision manual latitude/longitude overrides and instant Indian maritime operational presets (Mumbai High, Chennai Port, Kochi Malabar, Gulf of Kutch).
-   - Zero false alarm benchmark on undisturbed sea clutter (clean_ocean_no_spill.png).
+   - Zero false alarm benchmark on undisturbed sea clutter (`clean_ocean_no_spill.png`).
 
 2. **4D Digital Twin & Incident Reconstruction**:
    - Full interactive Leaflet / Esri satellite bathymetric map interface.
@@ -33,7 +33,7 @@
 
 5. **Operational Incident Registry & PDF Intelligence Briefs**:
    - Active incident table with live status filtering and classification tags.
-   - One-click ReportLab automated tactical PDF intelligence export (/api/scenario/{id}/export-pdf).
+   - One-click ReportLab automated tactical PDF intelligence export (`/api/scenario/{id}/export-pdf`).
 
 ---
 
@@ -51,46 +51,60 @@
 - Node.js (v18+) & npm
 - Python (v3.10+)
 
-### 1. Installation
+---
 
-`ash
-# Clone the repository
-git clone https://github.com/<your-username>/aquasentinel-4d.git
-cd aquasentinel-4d
+### Step 1: Install Dependencies
+
+```bash
+# Clone repository
+git clone https://github.com/monesh-10/SpillTheory.git
+cd SpillTheory
 
 # Install frontend dependencies
 npm install
 
 # Install backend dependencies
 pip install -r requirements.txt
-`
+```
 
-### 2. Starting the Backend Server
+---
 
-`ash
-# Run FastAPI on port 8000
+### Step 2: Start the Backend Server (FastAPI)
+
+Open a terminal window and run:
+
+```bash
 python -m uvicorn backend.main:app --port 8000 --reload
-`
-API Documentation will be available at: http://127.0.0.1:8000/docs
+```
 
-### 3. Starting the Frontend Dev Server
+* **API Base URL**: http://127.0.0.1:8000
+* **Interactive API Docs (Swagger UI)**: http://127.0.0.1:8000/docs
 
-`ash
-# In a separate terminal, launch the Vite dev server
+---
+
+### Step 3: Start the Frontend UI (React + Vite)
+
+Open a second terminal window and run:
+
+```bash
 npm run dev -- --host --port 3000
-`
-Open your browser at: http://localhost:3000
+```
+
+* **Web UI URL**: http://localhost:3000
+
+Open your browser and navigate to **http://localhost:3000** to launch the tactical dashboard.
 
 ---
 
 ## Project Structure
 
-`
-aquasentinel-4d/
+```
+SpillTheory/
 ├── backend/
 │   ├── main.py               # FastAPI application endpoints & scenario orchestration
 │   ├── backtracking/         # Lagrangian reverse particle benchmark & telemetry
-│   └── export_pdf.py         # Automated ReportLab intelligence briefing generator
+│   ├── metocean.py           # Real-time wind and ocean current drift modeling
+│   └── pdf_report.py         # Automated ReportLab intelligence briefing generator
 ├── sar/
 │   ├── inference.py          # U-Net SAR inference & Otsu radar backscatter segmentation
 │   ├── preprocessing.py      # SAR imagery normalization & tensor conversion
@@ -106,11 +120,12 @@ aquasentinel-4d/
 │   └── types/                # TypeScript interface definitions
 ├── index.html
 ├── package.json
+├── requirements.txt
 └── vite.config.ts
-`
+```
 
 ---
 
 ## License
 
-MIT License. Designed for maritime environmental protection and maritime situational awareness.
+MIT License. Developed for maritime environmental intelligence and rapid emergency response.
