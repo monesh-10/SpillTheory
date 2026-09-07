@@ -76,8 +76,7 @@
           "proximity_score": 0.92,
           "trajectory_score": 0.88,
           "anomaly_score": 0.75
-        },
-        "reasoning_agent_report": "Agent Analysis: High suspicion level. Vessel A (Tanker) was detected within 0.5 km of the hindcasted spill origin point exactly at 08:15Z. The AIS logs indicate a sharp anomalous course deviation (from 45° to 90°) accompanied by a sudden drop in speed from 12 knots to 2 knots for a duration of 45 minutes inside the origin window. Furthermore, the forward drift simulation of the oil slick perfectly aligns with the vessel's wake trajectory."
+        }
       }
     ]
   },

@@ -49,8 +49,7 @@
           "proximity_score": 0.60,
           "trajectory_score": 0.30,
           "anomaly_score": 0.0
-        },
-        "reasoning_agent_report": "Agent Analysis: Inconclusive. Ocean Voyager passed near the origin, but the drift pattern does not match the vessel wake. Characteristics suggest a potential natural seep from the seabed rather than a vessel discharge."
+        }
       }
     ]
   }

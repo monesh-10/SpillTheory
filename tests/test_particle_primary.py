@@ -12,13 +12,13 @@ Tests:
 
 import math
 import pytest
-from backtracking.particle_backtracking import (
+from backend.backtracking.particle_backtracking import (
     ParticleBacktrackingConfig,
     compute_expected_radius_km,
     _particle_compactness_score,
     evaluate_particle_ages,
 )
-from backtracking.benchmark import (
+from backend.backtracking.benchmark import (
     ControlledEnvironmentalProvider,
     run_synthetic_benchmark,
 )

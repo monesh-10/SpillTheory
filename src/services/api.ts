@@ -138,21 +138,27 @@ export const apiService = {
           summary: raw.sar_metadata?.reason || raw.attribution?.candidates?.[0]?.reasoning_agent_report || 'Active SAR backscatter depression identified in territorial waters.'
         };
 
+        const origEstimate = raw.hindcast?.origin_estimate;
+        const computedOrigLat = origEstimate?.point?.lat ?? origLat;
+        const computedOrigLon = origEstimate?.point?.lon ?? origLon;
+        const realParticleCloud = raw.hindcast?.particle_cloud || generateSubtleCloud([computedOrigLat, computedOrigLon], 40);
+        const realTrajectory = raw.hindcast?.trajectory_waypoints || [
+          [cLat, cLon],
+          [Number(((cLat + computedOrigLat) / 2).toFixed(4)), Number(((cLon + computedOrigLon) / 2).toFixed(4))],
+          [computedOrigLat, computedOrigLon]
+        ];
+
         const hindcast: HindcastResult = {
           incidentId: spillId,
-          originCoordinates: [origLat, origLon],
+          originCoordinates: [computedOrigLat, computedOrigLon],
           originRegionName: spillId === 'SPILL_002' ? 'Chennai Anchorage Approach' : spillId === 'SPILL_003' ? 'Kochi Shipping Fairway' : 'Mumbai High Sector Beta',
-          confidencePercent: Math.round((raw.hindcast?.origin_estimate?.confidence || 0.85) * 100),
-          dischargeWindowUtc: raw.hindcast?.origin_estimate?.time || '08:15 UTC',
-          particleCount: 64,
-          uncertaintyRadiusKm: 1.8,
-          estimatedSpillAgeRange: `${raw.spill_event?.estimated_age_hours || 4.0} hrs`,
-          trajectoryWaypoints: [
-            [cLat, cLon],
-            [Number(((cLat + origLat) / 2).toFixed(4)), Number(((cLon + origLon) / 2).toFixed(4))],
-            [origLat, origLon]
-          ],
-          particleCloud: generateSubtleCloud([origLat, origLon], 40)
+          confidencePercent: Math.round((origEstimate?.confidence || 0.85) * 100),
+          dischargeWindowUtc: origEstimate?.time ? origEstimate.time.replace('2026-09-01T', '').replace('Z', ' UTC') : '08:15 UTC',
+          particleCount: origEstimate?.particle_count || realParticleCloud.length || 150,
+          uncertaintyRadiusKm: origEstimate?.uncertainty_radius_km || 1.8,
+          estimatedSpillAgeRange: origEstimate?.best_age_hours ? `${origEstimate.best_age_hours} hrs (${origEstimate.plausible_age_range_hours?.join('-') || '2-6'}h plausible)` : `${raw.spill_event?.estimated_age_hours || 4.0} hrs`,
+          trajectoryWaypoints: realTrajectory,
+          particleCloud: realParticleCloud
         };
 
         const rawTracks = raw.ais?.vessel_tracks || [];

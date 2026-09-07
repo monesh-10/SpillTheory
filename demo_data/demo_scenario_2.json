@@ -49,8 +49,7 @@
           "proximity_score": 0.98,
           "trajectory_score": 0.90,
           "anomaly_score": 0.10
-        },
-        "reasoning_agent_report": "Agent Analysis: Very High confidence. Chennai Express was the only vessel transiting the exact origin point during the estimated time window. The spill trajectory perfectly follows the vessel's wake in offshore shipping lanes."
+        }
       }
     ]
   }

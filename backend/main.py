@@ -4,11 +4,18 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from backend.pdf_report import generate_forensic_dossier_pdf
 from backend.metocean import fetch_live_metocean, generate_live_drift_forecast
-from backend.multispectral import compute_multispectral_profile
+from backend.ais_algorithm import compute_vessel_attribution, haversine_distance
+from backend.backtracking.particle_backtracking import (
+    ParticleBacktrackingConfig,
+    run_particle_backtracking,
+    compute_cloud_r90,
+    compute_cloud_centroid
+)
 import json
 import shutil
+import math
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from PIL import Image
 import numpy as np
 
@@ -16,7 +23,14 @@ app = FastAPI(title="SpillTheory 4D Digital Twin API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -183,33 +197,104 @@ def get_scenario(spill_id: str):
             hourly_timeline=metocean.get("hourly_timeline")
         )
 
-        # Compute multi-spectral profile (Thermal IR & Subsurface Acoustic Multibeam Sonar)
-        coords = data.get("spill_event", {}).get("geometry", {}).get("coordinates", [[]])[0]
-        area = float(data.get("spill_event", {}).get("area_km2", 14.8))
-        ambient_t = float(metocean.get("atmosphere", {}).get("temp_c", 27.5))
-        data["multispectral"] = compute_multispectral_profile(c_lat, c_lon, coords, area, ambient_t)
+        # -------------------------------------------------------------
+        # Real Lagrangian Particle Backtracking Engine Execution
+        # -------------------------------------------------------------
+        drift_speed_ms = float(dm.get("drift_speed_ms", dm.get("drift_speed_kmh", 1.5) / 3.6))
+        drift_dir_deg = float(dm.get("drift_direction_deg", 72.0))
+        rad_drift = math.radians(drift_dir_deg)
+        u_base = drift_speed_ms * math.sin(rad_drift)
+        v_base = drift_speed_ms * math.cos(rad_drift)
+        timeline = metocean.get("hourly_timeline", [])
+
+        def live_velocity_provider(lat: float, lon: float, t_back: float):
+            idx = min(len(timeline) - 1, max(0, int(round(t_back))))
+            if timeline and idx < len(timeline):
+                hr_data = timeline[idx]
+                spd = float(hr_data.get("net_drift_speed_kts", 0.8)) * 0.514444
+                deg = float(hr_data.get("net_drift_direction_deg", drift_dir_deg))
+                r = math.radians(deg)
+                return (spd * math.sin(r), spd * math.cos(r))
+            return (u_base, v_base)
+
+        bt_cfg = ParticleBacktrackingConfig(
+            num_particles=150,
+            candidate_ages_hours=list(range(1, 25)),
+            random_seed=42
+        )
+        bt_results = run_particle_backtracking(
+            observed_centroid=(c_lat, c_lon),
+            velocity_provider=live_velocity_provider,
+            config=bt_cfg
+        )
+
+        best_age = int(bt_results["best_age_hours"])
+        best_centroid = bt_results["best_centroid"]
+        clouds = bt_results["candidate_clouds"]
+        best_particles = clouds.get(best_age, [])
+        r90_km = compute_cloud_r90(best_particles, best_centroid) if best_particles else 1.5
+
+        # Compute exact origin timestamp
+        try:
+            spill_dt = datetime.fromisoformat(spill_time.replace("Z", "+00:00"))
+        except Exception:
+            spill_dt = datetime.now(timezone.utc)
+        origin_dt = spill_dt - timedelta(hours=best_age)
+        origin_time_str = origin_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # Build reverse trajectory waypoints from slick (0h) to best_age
+        traj_waypoints = [[c_lat, c_lon]]
+        for h in range(1, best_age + 1):
+            if h in clouds:
+                c = compute_cloud_centroid(clouds[h])
+                traj_waypoints.append([round(c[0], 5), round(c[1], 5)])
+
+        # Construct snapshots for each evaluated hour
+        snapshots = {}
+        for age_h, pts in clouds.items():
+            snapshots[str(age_h)] = [[round(p[0], 5), round(p[1], 5)] for p in pts]
+
+        data["hindcast"] = {
+            "origin_estimate": {
+                "point": {"lat": round(best_centroid[0], 4), "lon": round(best_centroid[1], 4)},
+                "time": origin_time_str,
+                "confidence": round(float(bt_results["best_score"]), 2),
+                "best_age_hours": best_age,
+                "plausible_age_range_hours": list(bt_results["plausible_age_range"]),
+                "uncertainty_radius_km": round(float(r90_km), 2),
+                "mean_origin": {"lat": round(best_centroid[0], 4), "lon": round(best_centroid[1], 4)},
+                "median_origin": {"lat": round(best_centroid[0], 4), "lon": round(best_centroid[1], 4)},
+                "particle_count": len(best_particles)
+            },
+            "snapshots": snapshots,
+            "trajectory_waypoints": traj_waypoints,
+            "particle_cloud": [[round(p[0], 5), round(p[1], 5)] for p in best_particles],
+            "candidate_evaluations": bt_results.get("candidate_evaluations", []),
+            "disclaimer": "Engineering heuristic for decision-support; not a calibrated statistical probability."
+        }
+
+        # -------------------------------------------------------------
+        # Real Deterministic AIS Attribution Scoring
+        # -------------------------------------------------------------
+        vessel_tracks = data.get("ais", {}).get("vessel_tracks", [])
+        computed_candidates = []
+        for v in vessel_tracks:
+            cand = compute_vessel_attribution(
+                vessel=v,
+                origin_point=data["hindcast"]["origin_estimate"]["point"],
+                origin_time_iso=origin_time_str
+            )
+            computed_candidates.append(cand)
+        computed_candidates.sort(key=lambda x: x["score"], reverse=True)
+        data["attribution"] = {
+            "candidates": computed_candidates,
+            "disclaimer": "Deterministic kinematic proximity and anomaly attribution score."
+        }
+
     except Exception as err:
         data["live_metocean_error"] = str(err)
         
     return data
-
-@app.get("/api/scenario/{spill_id}/multispectral")
-def get_scenario_multispectral(spill_id: str):
-    """
-    Returns high-resolution Thermal Infrared (TIR) radiometry,
-    Bonn Agreement volumetric oil mass quantification, and 3D subsurface
-    acoustic multibeam sonar echogram cross-sections.
-    """
-    scenario = get_scenario(spill_id)
-    if "multispectral" in scenario:
-        return scenario["multispectral"]
-    se = scenario.get("spill_event", {})
-    centroid = se.get("centroid", {})
-    lat = float(centroid.get("lat", 18.12))
-    lon = float(centroid.get("lon", 72.45))
-    coords = se.get("geometry", {}).get("coordinates", [[]])[0]
-    area = float(se.get("area_km2", 14.8))
-    return compute_multispectral_profile(lat, lon, coords, area)
 
 @app.get("/api/scenario/{spill_id}/export-pdf")
 def export_scenario_pdf(spill_id: str):
@@ -414,20 +499,42 @@ async def detect_sar(
                 ]
             },
             "attribution": {
-                # Only qualifying suspect candidate
                 "candidates": [
-                    {
-                        "mmsi": 412345678,
-                        "name": "Vessel A (Tanker)",
-                        "score": 0.94,
-                        "evidence": {
-                            "proximity_score": 0.96,
-                            "trajectory_score": 0.92,
-                            "anomaly_score": 0.85
+                    compute_vessel_attribution(
+                        vessel=vt,
+                        origin_point={"lat": calc_origin_lat, "lon": calc_origin_lon},
+                        origin_time_iso=hindcast_timestamp
+                    )
+                    for vt in [
+                        {
+                            "mmsi": 412345678,
+                            "name": "Vessel A (Tanker)",
+                            "type": "Tanker",
+                            "path": [
+                                {"timestamp": "2026-09-01T06:00:00Z", "lat": round(calc_origin_lat - 0.05, 4), "lon": round(calc_origin_lon - 0.04, 4), "heading": 35, "sog": 12.0},
+                                {"timestamp": "2026-09-01T08:00:00Z", "lat": round(calc_origin_lat - 0.01, 4), "lon": round(calc_origin_lon - 0.01, 4), "heading": 35, "sog": 11.5},
+                                {"timestamp": "2026-09-01T08:15:00Z", "lat": calc_origin_lat, "lon": calc_origin_lon, "heading": 90, "sog": 2.4},
+                                {"timestamp": "2026-09-01T09:00:00Z", "lat": round(calc_origin_lat + 0.005, 4), "lon": round(calc_origin_lon + 0.005, 4), "heading": 90, "sog": 2.8},
+                                {"timestamp": detection_timestamp, "lat": round(calc_origin_lat + 0.060, 4), "lon": round(calc_origin_lon + 0.030, 4), "heading": 30, "sog": 12.2},
+                                {"timestamp": "2026-09-01T18:00:00Z", "lat": round(calc_origin_lat + 0.130, 4), "lon": round(calc_origin_lon + 0.065, 4), "heading": 30, "sog": 12.0},
+                                {"timestamp": "2026-09-02T04:30:00Z", "lat": round(calc_origin_lat + 0.230, 4), "lon": round(calc_origin_lon + 0.115, 4), "heading": 30, "sog": 12.0}
+                            ]
                         },
-                        "reasoning_agent_report": f"Agent Analysis: Deep learning segmentation detected active slick covering {calculated_area_km2} km² ({coverage:.2f}% pixel coverage). Vessel A's historical AIS trajectory intercepted the back-calculated origin point with an operational speed drop from 12 knots to 2.4 knots."
-                    }
-                ]
+                        {
+                            "mmsi": 987654321,
+                            "name": "Vessel B (Cargo)",
+                            "type": "Cargo",
+                            "path": [
+                                {"timestamp": "2026-09-01T06:00:00Z", "lat": round(calc_origin_lat + 0.12, 4), "lon": round(calc_origin_lon - 0.06, 4), "heading": 135, "sog": 14.0},
+                                {"timestamp": "2026-09-01T08:15:00Z", "lat": round(calc_origin_lat + 0.08, 4), "lon": round(calc_origin_lon - 0.02, 4), "heading": 135, "sog": 14.1},
+                                {"timestamp": detection_timestamp, "lat": round(calc_origin_lat + 0.01, 4), "lon": round(calc_origin_lon + 0.07, 4), "heading": 135, "sog": 13.9},
+                                {"timestamp": "2026-09-01T18:00:00Z", "lat": round(calc_origin_lat - 0.06, 4), "lon": round(calc_origin_lon + 0.15, 4), "heading": 135, "sog": 14.0},
+                                {"timestamp": "2026-09-02T04:30:00Z", "lat": round(calc_origin_lat - 0.14, 4), "lon": round(calc_origin_lon + 0.24, 4), "heading": 135, "sog": 14.0}
+                            ]
+                        }
+                    ]
+                ],
+                "disclaimer": "Deterministic kinematic proximity and anomaly attribution score."
             }
         }
         
