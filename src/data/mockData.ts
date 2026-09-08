@@ -158,7 +158,7 @@ export const SUSPECT_VESSELS: Vessel[] = [
     beamM: 42,
     currentCoordinates: [17.924, 72.715],
     currentSpeedKt: 11.4,
-    currentHeadingDeg: 71,
+    currentHeadingDeg: 120,
     distanceFromOriginKm: 2.8,
     timeDiffMinutes: 17,
     rank: 1,
@@ -178,9 +178,9 @@ export const SUSPECT_VESSELS: Vessel[] = [
       { lat: 18.210, lng: 72.310, timestampUtc: '01:42 UTC', speedKt: 12.4, headingDeg: 125 },
       { lat: 18.145, lng: 72.410, timestampUtc: '02:18 UTC', speedKt: 5.8, headingDeg: 145 },
       { lat: 18.080, lng: 72.485, timestampUtc: '02:31 UTC', speedKt: 6.2, headingDeg: 160 },
-      { lat: 18.048, lng: 72.525, timestampUtc: '02:47 UTC', speedKt: 7.1, headingDeg: 110 },
-      { lat: 17.985, lng: 72.610, timestampUtc: '03:05 UTC', speedKt: 10.9, headingDeg: 72 },
-      { lat: 17.924, lng: 72.715, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 71 }
+      { lat: 18.048, lng: 72.525, timestampUtc: '02:47 UTC', speedKt: 7.1, headingDeg: 120 },
+      { lat: 17.985, lng: 72.610, timestampUtc: '03:05 UTC', speedKt: 10.9, headingDeg: 120 },
+      { lat: 17.924, lng: 72.715, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 120 }
     ],
     activityTimeline: [
       { timestampUtc: '01:42 UTC', description: 'Vessel enters forensic tracking corridor from North-West', isAnomaly: false, type: 'ENTER_SECTOR' },

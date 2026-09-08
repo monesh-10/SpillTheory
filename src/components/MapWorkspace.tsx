@@ -28,6 +28,58 @@ import {
 } from '../types';
 import { MapGuideModal } from './MapGuideModal';
 
+// Interpolate position along multi-waypoint polyline track
+function interpolateTrackPosition(
+  track: { lat: number; lng: number; headingDeg?: number; speedKt?: number }[],
+  fraction: number
+): { pos: [number, number]; heading: number } {
+  if (!track || track.length === 0) return { pos: [0, 0], heading: 0 };
+  if (track.length === 1 || fraction <= 0) {
+    const p = track[0];
+    return { pos: [p.lat, p.lng], heading: p.headingDeg || 0 };
+  }
+  if (fraction >= 1) {
+    const last = track[track.length - 1];
+    return { pos: [last.lat, last.lng], heading: last.headingDeg || 0 };
+  }
+
+  // Calculate cumulative distances along track segments
+  const distances: number[] = [0];
+  let totalDist = 0;
+  for (let i = 0; i < track.length - 1; i++) {
+    const d = Math.hypot(
+      track[i + 1].lat - track[i].lat,
+      (track[i + 1].lng - track[i].lng) * Math.cos((track[i].lat * Math.PI) / 180)
+    );
+    totalDist += d;
+    distances.push(totalDist);
+  }
+
+  if (totalDist === 0) {
+    const p = track[0];
+    return { pos: [p.lat, p.lng], heading: p.headingDeg || 0 };
+  }
+
+  const targetDist = fraction * totalDist;
+  for (let i = 0; i < track.length - 1; i++) {
+    if (targetDist <= distances[i + 1]) {
+      const segStartDist = distances[i];
+      const segEndDist = distances[i + 1];
+      const segLen = segEndDist - segStartDist;
+      const segFraction = segLen > 0 ? (targetDist - segStartDist) / segLen : 0;
+      const p1 = track[i];
+      const p2 = track[i + 1];
+      const lat = p1.lat + (p2.lat - p1.lat) * segFraction;
+      const lng = p1.lng + (p2.lng - p1.lng) * segFraction;
+      const heading = p2.headingDeg !== undefined ? p2.headingDeg : (p1.headingDeg || 0);
+      return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading };
+    }
+  }
+
+  const last = track[track.length - 1];
+  return { pos: [last.lat, last.lng], heading: last.headingDeg || 0 };
+}
+
 interface MapWorkspaceProps {
   incident: Incident;
   vessels: Vessel[];
@@ -248,15 +300,15 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       const centerLat = baseLat + driftLatOffset;
       const centerLng = baseLng + driftLngOffset;
       const slickCenterIcon = L.divIcon({
-        className: 'custom-slick-marker',
+        className: 'custom-slick-marker !bg-transparent !border-0',
         html: `
           <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-            <div style="position: absolute; width: 26px; height: 26px; border-radius: 50%; background: rgba(239, 68, 68, 0.25); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-            <div style="position: absolute; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #F87171; background: rgba(220, 38, 38, 0.65); box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(239, 68, 68, 0.25); animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="position: absolute; inset: 6px; border-radius: 50%; border: 1.5px solid #F87171; background: rgba(220, 38, 38, 0.65); box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);"></div>
             <div style="width: 4px; height: 4px; border-radius: 50%; background: #FFFFFF;"></div>
 
             <!-- Floating Map Callout for Oil Slick (Anchored to Right to Prevent Overlap) -->
-            <div style="position: absolute; left: 24px; top: 50%; transform: translateY(-50%); pointer-events: auto; cursor: pointer; z-index: 35; display: flex; align-items: center;">
+            <div style="position: absolute; left: 28px; top: 50%; transform: translateY(-50%); pointer-events: auto; cursor: pointer; z-index: 35; display: flex; align-items: center;">
               <div style="width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 6px solid #EF4444;"></div>
               <div style="background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); border: 1.5px solid #EF4444; border-radius: 6px; padding: 4px 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.85); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                 <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #EF4444; box-shadow: 0 0 8px #EF4444;"></span>
@@ -297,19 +349,25 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
       // Add backward directional chevrons along path in Royal Blue
       if (hindcast.trajectoryWaypoints.length >= 2) {
-        for (let i = 1; i < hindcast.trajectoryWaypoints.length; i += 2) {
-          const pt = hindcast.trajectoryWaypoints[i];
+        for (let i = 0; i < hindcast.trajectoryWaypoints.length - 1; i++) {
+          const p1 = hindcast.trajectoryWaypoints[i];
+          const p2 = hindcast.trajectoryWaypoints[i + 1];
+          const mid: [number, number] = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+          const dLat = p2[0] - p1[0];
+          const dLng = p2[1] - p1[1];
+          const screenAngle = Math.atan2(-dLat, dLng * Math.cos((p1[0] * Math.PI) / 180)) * 180 / Math.PI;
+
           const chevronIcon = L.divIcon({
-            className: 'hindcast-chevron',
+            className: 'hindcast-chevron !bg-transparent !border-0',
             html: `
-              <div style="color: #60A5FA; font-size: 13px; font-weight: 800; transform: rotate(135deg); opacity: 0.95; text-shadow: 0 0 6px rgba(59, 130, 246, 0.6);">
-                ‹
+              <div style="width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; transform: rotate(${screenAngle}deg); transform-origin: 50% 50%; color: #60A5FA; font-size: 13px; font-weight: 900; opacity: 0.95; line-height: 1; text-shadow: 0 0 6px rgba(59, 130, 246, 0.6); pointer-events: none;">
+                ›
               </div>
             `,
             iconSize: [12, 12],
             iconAnchor: [6, 6],
           });
-          L.marker(pt, { icon: chevronIcon, interactive: false }).addTo(group);
+          L.marker(mid, { icon: chevronIcon, interactive: false }).addTo(group);
         }
       }
     }
@@ -336,15 +394,15 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
       // Tactical Reticle Target symbol ◎ icon with Floating Callout
       const originIcon = L.divIcon({
-        className: 'origin-marker',
+        className: 'origin-marker !bg-transparent !border-0',
         html: `
           <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
-            <div style="position: absolute; width: 26px; height: 26px; border: 1.5px dashed #F59E0B; border-radius: 50%;"></div>
-            <div style="position: absolute; width: 14px; height: 14px; border: 1.5px solid #F59E0B; border-radius: 50%; background: rgba(245, 158, 11, 0.2);"></div>
+            <div style="position: absolute; inset: 0; border: 1.5px dashed #F59E0B; border-radius: 50%;"></div>
+            <div style="position: absolute; inset: 6px; border: 1.5px solid #F59E0B; border-radius: 50%; background: rgba(245, 158, 11, 0.2);"></div>
             <div style="width: 5px; height: 5px; background: #F59E0B; border-radius: 50%; box-shadow: 0 0 8px #F59E0B;"></div>
 
             <!-- Floating Tactical Callout for Probable Origin (Anchored to Left to Prevent Overlap) -->
-            <div style="position: absolute; right: 24px; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 35; display: flex; align-items: center;">
+            <div style="position: absolute; right: 28px; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 35; display: flex; align-items: center;">
               <div style="background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); border: 1.5px solid #F59E0B; border-radius: 6px; padding: 4px 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.85); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                 <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; box-shadow: 0 0 8px #F59E0B;"></span>
                 <span style="font-size: 11px; font-weight: 700; color: #F59E0B; font-family: 'Inter', sans-serif;">Probable Origin</span>
@@ -408,19 +466,25 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       `, { sticky: true });
 
       // Forward directional chevrons along forecast path in Emerald Green
-      for (let i = 1; i < forecastSpine.length; i++) {
-        const pt = forecastSpine[i];
+      for (let i = 0; i < forecastSpine.length - 1; i++) {
+        const p1 = forecastSpine[i];
+        const p2 = forecastSpine[i + 1];
+        const mid: [number, number] = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
+        const dLat = p2[0] - p1[0];
+        const dLng = p2[1] - p1[1];
+        const screenAngle = Math.atan2(-dLat, dLng * Math.cos((p1[0] * Math.PI) / 180)) * 180 / Math.PI;
+
         const chevronIcon = L.divIcon({
-          className: 'forecast-chevron',
+          className: 'forecast-chevron !bg-transparent !border-0',
           html: `
-            <div style="color: #10B981; font-size: 13px; font-weight: 800; transform: rotate(45deg); opacity: 0.9; text-shadow: 0 0 6px rgba(16, 185, 129, 0.8);">
+            <div style="width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; transform: rotate(${screenAngle}deg); transform-origin: 50% 50%; color: #10B981; font-size: 13px; font-weight: 900; opacity: 0.9; line-height: 1; text-shadow: 0 0 6px rgba(16, 185, 129, 0.8); pointer-events: none;">
               ›
             </div>
           `,
           iconSize: [12, 12],
           iconAnchor: [6, 6],
         });
-        L.marker(pt, { icon: chevronIcon, interactive: false }).addTo(group);
+        L.marker(mid, { icon: chevronIcon, interactive: false }).addTo(group);
       }
     }
 
@@ -438,7 +502,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       }).addTo(group);
 
       const shorelineIcon = L.divIcon({
-        className: 'shoreline-risk-marker',
+        className: 'shoreline-risk-marker !bg-transparent !border-0',
         html: `
           <div style="background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); border: 1.5px solid #F59E0B; border-radius: 6px; padding: 4px 10px; font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; color: #F59E0B; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 20px rgba(0,0,0,0.85); white-space: nowrap;">
             <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; box-shadow: 0 0 6px #F59E0B;"></span>
@@ -471,8 +535,8 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         const isRelevant = vessel.attributionScore >= 70;
         const isDimmed = selectedVessel !== null && !isSelected;
 
-        // Draw Ship Navigation Path with Directional Chevrons in Purple
-        if ((layerState.vesselTracks || isSelected) && vessel.track.length > 1) {
+        // Draw Ship Navigation Path with Directional Chevrons
+        if ((layerState.vesselTracks || isSelected) && vessel.track && vessel.track.length > 1) {
           const trackCoords = vessel.track.map(t => [t.lat, t.lng] as [number, number]);
           
           L.polyline(trackCoords, {
@@ -482,39 +546,45 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
             opacity: isDimmed ? 0.2 : (isSelected ? 1.0 : 0.7),
           }).addTo(group);
 
-          // Add directional chevrons along vessel route
-          for (let i = 0; i < trackCoords.length - 1; i += 2) {
+          // Add directional chevrons along vessel route segments
+          for (let i = 0; i < trackCoords.length - 1; i++) {
             const p1 = trackCoords[i];
             const p2 = trackCoords[i + 1];
             const mid: [number, number] = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2];
-            const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]) * 180 / Math.PI;
+            const dLat = p2[0] - p1[0];
+            const dLng = p2[1] - p1[1];
+            const screenAngle = Math.atan2(-dLat, dLng * Math.cos((p1[0] * Math.PI) / 180)) * 180 / Math.PI;
 
             const chevronIcon = L.divIcon({
-              className: 'vessel-track-chevron',
+              className: 'vessel-track-chevron !bg-transparent !border-0',
               html: `
-                <div style="transform: rotate(${angle}deg); color: ${isSelected ? '#00E5FF' : (isFlagged ? '#EF4444' : '#8B5CF6')}; font-size: 11px; font-weight: bold; opacity: ${isDimmed ? 0.2 : 0.85}; line-height: 1;">
+                <div style="width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; transform: rotate(${screenAngle}deg); transform-origin: 50% 50%; color: ${isSelected ? '#00E5FF' : (isFlagged ? '#EF4444' : '#8B5CF6')}; font-size: 13px; font-weight: 900; opacity: ${isDimmed ? 0.2 : 0.85}; line-height: 1; pointer-events: none;">
                   ›
                 </div>
               `,
-              iconSize: [10, 10],
-              iconAnchor: [5, 5],
+              iconSize: [12, 12],
+              iconAnchor: [6, 6],
             });
             L.marker(mid, { icon: chevronIcon, interactive: false }).addTo(group);
           }
         }
 
-        // Time-interpolated vessel position
-        let currentPos = vessel.currentCoordinates;
-        if (vessel.track.length > 1 && currentTimeSimulationMinutes > 0) {
-          const fraction = Math.min(currentTimeSimulationMinutes / 180, 1);
-          const startPt = vessel.track[0];
-          const endPt = vessel.track[vessel.track.length - 1];
-          const interpLat = startPt.lat + (endPt.lat - startPt.lat) * fraction;
-          const interpLng = startPt.lng + (endPt.lng - startPt.lng) * fraction;
-          currentPos = [Number(interpLat.toFixed(4)), Number(interpLng.toFixed(4))];
+        // Time-interpolated vessel position strictly adhering to polyline track
+        const timeFraction = Math.min(Math.max(currentTimeSimulationMinutes / 180, 0), 1);
+        let currentPos: [number, number];
+        let heading: number;
+
+        if (vessel.track && vessel.track.length > 0) {
+          const interp = interpolateTrackPosition(vessel.track, timeFraction);
+          currentPos = interp.pos;
+          heading = timeFraction >= 1 && vessel.currentHeadingDeg !== undefined
+            ? vessel.currentHeadingDeg
+            : interp.heading;
+        } else {
+          currentPos = vessel.currentCoordinates;
+          heading = vessel.currentHeadingDeg || 0;
         }
 
-        const heading = vessel.currentHeadingDeg || 0;
         const shipFillColor = isFlagged ? '#EF4444' : (isRelevant ? '#00E5FF' : '#94A3B8');
 
         // Label for other key vessels matching reference image
@@ -522,44 +592,44 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         const displayName = vessel.name.includes('OCEAN STAR') ? 'MT Ocean Star' : (vessel.name.includes('BLUE HORIZON') ? 'Ocean Trader' : vessel.name);
 
         const vesselIcon = L.divIcon({
-          className: 'vessel-marker-icon',
+          className: 'vessel-marker-icon !bg-transparent !border-0',
           html: `
             <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; opacity: ${isDimmed ? 0.3 : 1.0};">
               ${isSelected ? `
-                <div style="position: absolute; width: 32px; height: 32px; border: 1.5px solid #00E5FF; border-radius: 50%; box-shadow: 0 0 14px rgba(0, 229, 255, 0.8);"></div>
+                <div style="position: absolute; inset: 0; border: 1.5px solid #00E5FF; border-radius: 50%; box-shadow: 0 0 14px rgba(0, 229, 255, 0.8); pointer-events: none;"></div>
               ` : ''}
               
               ${isFlagged ? `
                 <!-- Pulsing Halo Aura around Flagged Suspect -->
-                <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.25); animation: ping 2.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
-                <div style="position: absolute; width: 26px; height: 26px; border: 1.5px solid #EF4444; border-radius: 50%;"></div>
+                <div style="position: absolute; inset: 0; border-radius: 50%; background: rgba(239, 68, 68, 0.25); animation: ping 2.5s cubic-bezier(0,0,0.2,1) infinite; pointer-events: none;"></div>
+                <div style="position: absolute; inset: 3px; border: 1.5px solid #EF4444; border-radius: 50%; background: rgba(239, 68, 68, 0.2); pointer-events: none;"></div>
               ` : ''}
 
-              <!-- Ship Directional Vector -->
-              <div style="transform: rotate(${heading}deg);">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="${shipFillColor}" stroke="#070F1D" stroke-width="1.5">
+              <!-- Ship Directional Vector (0° = North, pointing Up) -->
+              <div style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; transform: rotate(${heading}deg); transform-origin: 50% 50%; pointer-events: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="${shipFillColor}" stroke="#070F1D" stroke-width="1.5" style="display: block;">
                   <polygon points="12 2 19 21 12 17 5 21 12 2" />
                 </svg>
               </div>
 
               <!-- High-End Tactical Floating Callout for Flagged Suspect -->
               ${isFlagged ? `
-                <div style="position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 40;">
+                <div style="position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 40; display: flex; flex-direction: column; align-items: center;">
                   <div style="background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); border: 1.5px solid #EF4444; border-radius: 6px; padding: 3px 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.85); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                     <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #EF4444; box-shadow: 0 0 8px #EF4444;"></span>
                     <span style="font-size: 10px; font-weight: 800; color: #EF4444; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">#1 FLAGGED</span>
                     <span style="color: #475569; font-size: 10px;">|</span>
                     <span style="font-size: 11px; font-weight: 800; color: #F8FAFC; font-family: 'JetBrains Mono', monospace;">${vessel.attributionScore}%</span>
                   </div>
-                  <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #EF4444; margin: 0 auto;"></div>
+                  <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #EF4444; margin-top: -1px;"></div>
                 </div>
               ` : ''}
 
               <!-- Direct on-map label for other vessels matching reference image -->
               ${hasVesselBadge ? `
-                <div style="position: absolute; left: 26px; top: -8px; pointer-events: none; white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,0.9);">
+                <div style="position: absolute; left: 28px; top: 50%; transform: translateY(-50%); pointer-events: none; white-space: nowrap; text-shadow: 0 1px 4px rgba(0,0,0,0.95); background: rgba(7, 15, 29, 0.75); backdrop-filter: blur(4px); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">
                   <div style="font-size: 11px; font-weight: 700; color: ${isRelevant ? '#00E5FF' : '#F8FAFC'}; font-family: 'Inter', sans-serif;">${displayName}</div>
-                  <div style="font-size: 10px; color: #94A3B8; font-family: 'JetBrains Mono', monospace;">${vessel.currentSpeedKt} kt · ${String(vessel.currentHeadingDeg).padStart(3, '0')}°</div>
+                  <div style="font-size: 10px; color: #94A3B8; font-family: 'JetBrains Mono', monospace;">${vessel.currentSpeedKt} kt · ${String(heading).padStart(3, '0')}°</div>
                 </div>
               ` : ''}
             </div>
@@ -576,7 +646,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
             <div style="font-weight: 800; color: ${isFlagged ? '#EF4444' : '#F8FAFC'}; font-size: 12px;">${vessel.name}</div>
             <div style="color: #94A3B8; font-size: 10px; margin-top: 1px;">MMSI: ${vessel.mmsi} · ${vessel.type} · ${vessel.flag}</div>
             <div style="font-family: 'JetBrains Mono', monospace; color: #00E5FF; font-size: 11px; margin-top: 3px;">
-              ${vessel.currentSpeedKt} kn · Heading: ${vessel.currentHeadingDeg}°
+              ${vessel.currentSpeedKt} kn · Heading: ${heading}°
             </div>
             <div style="color: ${isFlagged ? '#EF4444' : '#10B981'}; font-weight: 700; margin-top: 4px; font-size: 11px; font-family: 'JetBrains Mono', monospace;">
               Forensic Attribution Score: ${vessel.attributionScore}%
@@ -599,7 +669,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
       coastalCities.forEach(city => {
         const cityIcon = L.divIcon({
-          className: 'city-label-marker',
+          className: 'city-label-marker !bg-transparent !border-0',
           html: `
             <div style="display: flex; align-items: center; gap: 4px; pointer-events: none; white-space: nowrap;">
               <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #F8FAFC; box-shadow: 0 0 6px rgba(255,255,255,0.8);"></span>
@@ -614,7 +684,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
       // Arabian Sea watermark
       const seaIcon = L.divIcon({
-        className: 'sea-watermark',
+        className: 'sea-watermark !bg-transparent !border-0',
         html: `
           <div style="font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: rgba(56, 189, 248, 0.25); letter-spacing: 0.15em; text-transform: uppercase; pointer-events: none; font-style: italic;">
             Arabian Sea
@@ -635,7 +705,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       ];
       windVectors.forEach(pos => {
         const arrowIcon = L.divIcon({
-          className: 'wind-arrow',
+          className: 'wind-arrow !bg-transparent !border-0',
           html: `
             <div style="transform: rotate(65deg); color: rgba(0, 229, 255, 0.45); font-size: 13px; font-weight: bold; pointer-events: none;">
               ➔
@@ -646,34 +716,6 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         });
         L.marker(pos, { icon: arrowIcon, interactive: false }).addTo(group);
       });
-
-      // Hindcast Path Label on Map
-      const hindcastMidLat = (incident.coordinates[0] + hindcast.originCoordinates[0]) / 2;
-      const hindcastMidLng = (incident.coordinates[1] + hindcast.originCoordinates[1]) / 2;
-      const hindcastLabelIcon = L.divIcon({
-        className: 'hindcast-label',
-        html: `
-          <div style="color: #00E5FF; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; text-shadow: 0 0 8px rgba(0,229,255,0.7); pointer-events: none; white-space: nowrap; transform: translate(-30px, 10px);">
-            Hindcast<br/><span style="font-size: 10px; font-family: monospace;">(-5h)</span>
-          </div>
-        `,
-        iconSize: [60, 24],
-        iconAnchor: [30, 12]
-      });
-      L.marker([hindcastMidLat, hindcastMidLng], { icon: hindcastLabelIcon, interactive: false }).addTo(group);
-
-      // Forecast Path Label on Map
-      const forecastLabelIcon = L.divIcon({
-        className: 'forecast-label',
-        html: `
-          <div style="color: #C084FC; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700; text-shadow: 0 0 8px rgba(192,132,252,0.7); pointer-events: none; white-space: nowrap; transform: translate(10px, 10px);">
-            Forecast<br/><span style="font-size: 10px; font-family: monospace;">(+24h)</span>
-          </div>
-        `,
-        iconSize: [60, 24],
-        iconAnchor: [30, 12]
-      });
-      L.marker([incident.coordinates[0] - 0.04, incident.coordinates[1] + 0.04], { icon: forecastLabelIcon, interactive: false }).addTo(group);
     }
 
   }, [

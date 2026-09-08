@@ -28,6 +28,12 @@
   background-color: #050B14 !important;
 }
 
+/* Reset all custom Leaflet div icons */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
 /* Dark Ocean Satellite Tile Filter (matching media_1788793921660.png) */
 .leaflet-tile {
   filter: brightness(0.75) contrast(1.25) saturate(1.1);
