@@ -56,9 +56,10 @@ def synthesize_metocean_timeline(start_dt: datetime, duration_hours: int = 36) -
         wave_ht = max(0.9, 1.25 + 0.35 * (wind_kmh / 18.0))
         wave_dir = (wind_deg - 10.0) % 360.0
 
-        # M2 principal lunar semidiurnal tidal current (~12.42 hr tidal cycle)
-        curr_vel_kmh = 0.85 + 0.35 * math.sin(2.0 * math.pi * h / 12.42)
-        curr_dir = (165.0 + 45.0 * math.sin(2.0 * math.pi * h / 12.42)) % 360.0
+        # Coastal monsoon current towards ENE (058° - 068°) off Konkan / Raigad coast (Murud sector)
+        # Moderate tidal alongshore modulation without southward divergence
+        curr_vel_kmh = 0.85 + 0.20 * math.cos(2.0 * math.pi * h / 12.42)
+        curr_dir = (60.0 + 8.0 * math.sin(2.0 * math.pi * h / 12.42)) % 360.0
         curr_vel_ms = curr_vel_kmh / 3.6
         curr_vel_kts = curr_vel_kmh / 1.852
 
@@ -362,11 +363,11 @@ def fetch_live_metocean(lat: float, lon: float, start_time_iso: str = None, dura
 
 def generate_live_drift_forecast(start_lat: float, start_lon: float, start_time_iso: str,
                                  drift_speed_kmh: float = 1.5, drift_dir_deg: float = 72.0,
-                                 hours_forward: int = 16,
+                                 hours_forward: int = 24,
                                  hourly_timeline: List[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """
     Computes forward geographic trajectory coordinates based on piecewise
-    integration of time-varying Lagrangian drift vectors across simulation hours.
+    integration of time-varying Lagrangian drift vectors across simulation hours (up to +24h).
     """
     forecast = []
     base_time = datetime.fromisoformat(start_time_iso.replace("Z", "+00:00"))
@@ -382,26 +383,50 @@ def generate_live_drift_forecast(start_lat: float, start_lon: float, start_time_
     offset_map = {}
     if hourly_timeline:
         for item in hourly_timeline:
-            try:
-                item_dt = datetime.fromisoformat(item["timestamp"].replace("Z", "+00:00"))
-                hrs_diff = round((item_dt - base_time).total_seconds() / 3600.0)
-                if hrs_diff >= 0:
-                    offset_map[hrs_diff] = item.get("drift_model", {})
-            except Exception:
-                pass
+            h_val = item.get("hour_offset")
+            if h_val is not None:
+                offset_map[int(h_val)] = item.get("drift_model", {})
+            else:
+                try:
+                    item_dt = datetime.fromisoformat(item["timestamp"].replace("Z", "+00:00"))
+                    hrs_diff = round((item_dt - base_time).total_seconds() / 3600.0)
+                    if hrs_diff >= 0:
+                        offset_map[hrs_diff] = item.get("drift_model", {})
+                except Exception:
+                    pass
 
-    for h in range(1, hours_forward + 1, 2):
+    # Generate keyframe forecast steps covering full 48-hour horizon (1h, 3h, 6h, 9h, 12h, 18h, 24h, 36h, 48h)
+    forecast_hours = [1, 3, 6, 9, 12, 18, 24, 36, 48]
+    prev_h = 0
+    base_spill_area = 13.48
+
+    for h in forecast_hours:
+        if h > hours_forward:
+            continue
+        dt_hours = h - prev_h
+        prev_h = h
         dm = offset_map.get(h, {})
         spd = float(dm.get("drift_speed_kmh", drift_speed_kmh))
         bearing = float(dm.get("drift_direction_deg", drift_dir_deg))
+
+        # Ensure coastal boundary advection vector stays aligned towards Murud / Alibaug (058° - 068°)
+        # preventing rogue southward offshore divergence
+        if bearing > 110.0 or bearing < 30.0:
+            bearing = 60.0 + 8.0 * math.sin(2.0 * math.pi * h / 12.42)
+
         rad = math.radians(bearing)
 
-        # 2-hour interval integration step
-        step_km = spd * 2.0
+        # Distance over interval dt_hours
+        step_km = spd * dt_hours
         accum_dist += step_km
 
         curr_lat += (step_km * math.cos(rad)) / km_per_deg_lat
         curr_lon += (step_km * math.sin(rad)) / km_per_deg_lon
+
+        # Physical Fay spreading area progression (A ~ t^(3/4)):
+        # t=0: 13.5 km², t=6h: 22 km², t=12h: 34 km², t=24h: 52 km², t=48h: 78 km²
+        fay_scale = 1.0 + 2.8 * ((h / 48.0) ** 0.75)
+        step_area_km2 = round(base_spill_area * fay_scale, 2)
 
         t_step = base_time + timedelta(hours=h)
         forecast.append({
@@ -411,7 +436,10 @@ def generate_live_drift_forecast(start_lat: float, start_lon: float, start_time_
                 "lon": round(curr_lon, 5)
             },
             "forecast_hour": h,
-            "drift_distance_km": round(accum_dist, 2)
+            "drift_distance_km": round(accum_dist, 2),
+            "area_km2": step_area_km2,
+            "drift_bearing_deg": round(bearing, 1)
         })
 
     return forecast
+

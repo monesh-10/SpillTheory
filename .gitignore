@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -65,3 +65,4 @@ ehthumbs.db
 .idea/
 *.swp
 *.swo
+*.zip

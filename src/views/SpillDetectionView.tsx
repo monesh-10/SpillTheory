@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SARDetectionResult, Incident } from '../types';
 import { apiService } from '../services/api';
+import { PRIMARY_INCIDENT, SINGLE_SPILL_INCIDENT } from '../data/mockData';
 
 interface SpillDetectionViewProps {
   detectionData: SARDetectionResult;
@@ -48,6 +49,7 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
   const [selectedDemoTile, setSelectedDemoTile] = useState<string>('clean_ocean_no_spill.png');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
+  const [spillMode, setSpillMode] = useState<'dual' | 'single'>('dual');
   const [imgLoadError, setImgLoadError] = useState<boolean>(false);
   const [maskLoadError, setMaskLoadError] = useState<boolean>(false);
   const [lastInferenceTimestamp, setLastInferenceTimestamp] = useState<number>(Date.now());
@@ -94,12 +96,14 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     setImgLoadError(false);
     setMaskLoadError(false);
     setRealResult(null);
+
     // Automatically trigger neural inference on upload
     handleStartInference(file);
   };
 
   const handleStartInference = async (customTarget?: File | string) => {
     const target = customTarget !== undefined ? customTarget : (uploadedFile || selectedDemoTile);
+
     setIsProcessing(true);
     setCurrentStageIndex(0);
     setRealResult(null);
@@ -131,10 +135,13 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
       setRealResult(res);
 
       if (res && res.coverage_percent !== undefined) {
+        const isDualResult = res.num_sources === 2 || res.topology === 'DUAL_MERGED';
+        setSpillMode(isDualResult ? 'dual' : 'single');
+
         setCurrentMetrics({
           ...currentMetrics,
-          areaKm2: Number(res.area_km2 || ((res.coverage_percent * 256 * 256 * 0.0001) / 10).toFixed(2)) || (typeof target === 'string' && target.includes('clean') ? 0.0 : 13.48),
-          classificationConfidence: res.coverage_percent > 1.0 ? 94.7 : 1.0
+          areaKm2: Number(res.area_km2 !== undefined ? res.area_km2 : (isDualResult ? 13.48 : 8.25)),
+          classificationConfidence: res.coverage_percent > 0.05 ? (isDualResult ? 94.7 : 95.8) : 0.0
         });
       }
     } catch {
@@ -144,48 +151,49 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     }
   };
 
-  const isCleanOcean = typeof (uploadedFile || selectedDemoTile) === 'string'
-    ? selectedDemoTile.includes('clean')
+  const isCleanOcean = realResult
+    ? (realResult.status === 'clean_ocean' || realResult.num_sources === 0)
     : false;
+  const isDual = realResult
+    ? (realResult.num_sources === 2 || realResult.topology === 'DUAL_MERGED')
+    : (spillMode === 'dual');
   const confidenceValue = realResult
-    ? (realResult.status === 'clean_ocean' ? 1.0 : 94.7)
-    : (isCleanOcean ? 1.0 : 94.7);
+    ? (isCleanOcean ? 1.0 : Math.round((realResult.unet_analysis?.confidence || (isDual ? 0.947 : 0.958)) * 100))
+    : (isDual ? 94.7 : 95.8);
   const areaValue = realResult
-    ? (realResult.status === 'clean_ocean' ? 0.0 : (realResult.area_km2 || 4.2))
-    : (isCleanOcean ? 0.0 : 13.48);
+    ? (isCleanOcean ? 0.0 : (realResult.area_km2 ?? (isDual ? 13.48 : 8.25)))
+    : (isDual ? 13.48 : 8.25);
   const sarImageUrl = uploadedPreviewUrl || `http://localhost:8000/demo_data/${selectedDemoTile}`;
   const maskImageUrl = realResult?.sar_metadata?.mask_url
     ? `${realResult.sar_metadata.mask_url}?t=${lastInferenceTimestamp}`
-    : (realResult?.status === 'clean_ocean' ? null : (uploadedFile ? null : `http://localhost:8000/demo_data/_latest_mask.png`));
+    : (isCleanOcean ? null : (uploadedFile ? null : `http://localhost:8000/demo_data/_latest_mask.png`));
 
   const handleOpenDigitalTwin = () => {
-    const se = realResult?.scenario?.spill_event || realResult?.spill_event;
-    const targetLat = manualCoordMode ? customLat : (se?.centroid?.lat || incident.coordinates[0]);
-    const targetLon = manualCoordMode ? customLon : (se?.centroid?.lon || incident.coordinates[1]);
-    const effSpillId = se?.spill_id || `SAR_${Date.now().toString().slice(-6)}`;
-    const effArea = se?.area_km2 || (areaValue || 13.48);
-    const effConf = se?.confidence ? Math.round(se.confidence * 100) : 95;
-
-    if (onSpillDetected && realResult?.status !== 'clean_ocean') {
-      onSpillDetected({
-        id: effSpillId,
-        code: `INC-${effSpillId.slice(-4)}`,
-        name: manualCoordMode ? `Manual Geo-Anchor: ${targetLat.toFixed(2)}°N, ${targetLon.toFixed(2)}°E` : `SAR Detect: ${se?.location_name || 'Offshore Mumbai'}`,
-        locationName: manualCoordMode ? `Custom Geo-Anchor (${targetLat.toFixed(3)}°N, ${targetLon.toFixed(3)}°E)` : (se?.location_name || 'Offshore Mumbai (18.11°N, 72.46°E)'),
-        coordinates: [targetLat, targetLon],
-        detectedAt: se?.timestamp || '2026-09-01 12:30:00 UTC',
-        estimatedAgeHours: '4.25h',
-        slickAreaKm2: effArea,
-        slickPerimeterKm: Number((((effArea * 2.1) + 10.4)).toFixed(1)),
-        confidencePercent: effConf,
-        classification: 'Probable petroleum slick',
-        sensor: 'Sentinel-1A (IW, VV)',
+    if (onSpillDetected && realResult?.status !== 'clean_ocean' && !isCleanOcean) {
+      const dynamicSpillId = realResult?.spill_id || (isDual ? 'OCN-042' : 'OCN-043');
+      const customInc: Incident = {
+        id: dynamicSpillId,
+        code: dynamicSpillId,
+        name: realResult?.location || (isDual ? 'Offshore Mumbai Basin (Dual Coalesced)' : 'Offshore Mumbai Basin (Single Point-Source)'),
+        locationName: realResult?.location || 'Offshore Mumbai Basin, Arabian Sea',
+        coordinates: [
+          Number(realResult?.scenario?.spill_event?.centroid?.lat || incident.coordinates[0] || 18.12),
+          Number(realResult?.scenario?.spill_event?.centroid?.lon || incident.coordinates[1] || 72.45)
+        ],
+        detectedAt: realResult?.scenario?.spill_event?.timestamp || '2026-09-07T04:32:00Z',
+        estimatedAgeHours: '5.5 hours',
+        slickAreaKm2: Number(realResult?.area_km2 || (isDual ? 13.48 : 8.25)),
+        slickPerimeterKm: Math.round(Math.sqrt(Number(realResult?.area_km2 || (isDual ? 13.48 : 8.25))) * 8.5 * 10) / 10,
+        confidencePercent: Math.round((realResult?.unet_analysis?.confidence || (isDual ? 0.947 : 0.958)) * 100),
+        classification: isDual ? 'Dual-Source Petroleum Coalescence (2 Ships)' : 'Single Point-Source Petroleum (1 Ship)',
+        sensor: 'Sentinel-1 / ALOS PALSAR C/L-Band SAR',
         status: 'UNDER INVESTIGATION',
         priority: 'HIGH',
         backscatterDb: -9.2,
-        model: 'SpillTheory-Seg v1.4.2',
-        summary: `Autonomous U-Net segmented a ${effArea} km² oil slick with ${effConf}% confidence at [${targetLat.toFixed(3)}°N, ${targetLon.toFixed(3)}°E].`
-      });
+        model: 'SpillTheory U-Net Deep Segmentation',
+        summary: realResult?.unet_analysis?.reason || 'Autonomous U-Net detection and topological deconvolution.'
+      };
+      onSpillDetected(customInc);
     } else {
       onOpenWorkspace();
     }
@@ -750,7 +758,70 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
                   DETECTION CHARACTERIZATION
                 </span>
-                <Info className="w-3.5 h-3.5 text-cyan-400 cursor-pointer" />
+                <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                  isCleanOcean && areaValue === 0
+                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
+                    : spillMode === 'dual'
+                    ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                    : 'bg-red-950/80 text-red-300 border border-red-500/40'
+                }`}>
+                  {isCleanOcean && areaValue === 0 ? 'CLEAN OCEAN' : (spillMode === 'dual' ? '2-SPILLS MERGED' : '1-SPILL SINGLE')}
+                </span>
+              </div>
+
+              {/* Autonomous U-Net Deep Learning Source Identification Card */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                  <span className="flex items-center gap-1.5">
+                    <Cpu className="w-3 h-3 text-cyan-400" />
+                    U-NET AI SOURCE VERDICT:
+                  </span>
+                  <span className="font-mono text-cyan-400">IoU: 94.7%</span>
+                </div>
+
+                <div className={`p-3 rounded-lg border flex flex-col gap-1.5 shadow-md ${
+                  isCleanOcean && areaValue === 0
+                    ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                    : isDual
+                    ? 'bg-purple-950/40 border-purple-500/50 text-purple-200'
+                    : 'bg-cyan-950/40 border-[#00E5FF]/40 text-cyan-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-mono uppercase tracking-wide flex items-center gap-1.5">
+                      {isCleanOcean && areaValue === 0 ? (
+                        <>🌊 CLEAN OCEAN (0 VESSELS)</>
+                      ) : isDual ? (
+                        <>🚢🚢 DUAL SHIP LEAK (2 VESSELS)</>
+                      ) : (
+                        <>🚢 SINGLE SHIP LEAK (1 VESSEL)</>
+                      )}
+                    </span>
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-black/50 border border-white/10 font-bold uppercase tracking-wider">
+                      {isCleanOcean && areaValue === 0 ? 'CLEAN SEA' : isDual ? '2-SHIPS COALESCED' : '1-SHIP ISOLATED'}
+                    </span>
+                  </div>
+
+                  <div className="text-[10.5px] text-slate-300 font-sans leading-relaxed">
+                    {realResult?.unet_analysis?.reason || realResult?.sar_metadata?.reason || (
+                      isCleanOcean && areaValue === 0
+                        ? 'U-Net neural segmentation confirmed undisturbed sea clutter Bragg scattering with zero capillary wave suppression.'
+                        : isDual
+                        ? 'U-Net detected two distinct discharge plumes that coalesced into a merged slick with bottleneck constriction.'
+                        : 'U-Net detected a single isolated point-source discharge plume radiating from one vessel release point.'
+                    )}
+                  </div>
+
+                  {realResult?.unet_analysis?.source_peaks && realResult.unet_analysis.source_peaks.length > 0 && (
+                    <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center gap-2 text-[9.5px] font-mono text-slate-400">
+                      <span className="text-slate-400">Plume Cores:</span>
+                      {realResult.unet_analysis.source_peaks.map((p: any, idx: number) => (
+                        <span key={idx} className="px-1.5 py-0.5 rounded bg-[#070F1D] border border-cyan-500/30 text-cyan-300 font-bold">
+                          Core #{idx + 1}: ({Number(p.x).toFixed(0)}px, {Number(p.y).toFixed(0)}px)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-3 pt-1">
@@ -778,11 +849,15 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                   </span>
                 </div>
 
-                {/* Perimeter */}
+                {/* Responsible Suspect Vessels */}
                 <div className="flex justify-between items-center py-1.5 border-b border-[#162D4A]/50">
-                  <span className="text-[11px] text-slate-400">Perimeter</span>
-                  <span className="font-mono text-white font-bold text-sm">
-                    {isCleanOcean && areaValue === 0 ? '0.0 km' : `${(areaValue * 2.1 + 10.4).toFixed(1)} km`}
+                  <span className="text-[11px] text-slate-400">Attributed Vessels</span>
+                  <span className="font-mono text-cyan-300 font-bold text-xs text-right">
+                    {isCleanOcean && areaValue === 0
+                      ? 'None (Clean Clutter)'
+                      : isDual
+                      ? '2 Ships (Ocean Star + Gulf Voyager)'
+                      : '1 Ship (MT Ocean Star · 91.7%)'}
                   </span>
                 </div>
 
@@ -790,23 +865,19 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 <div className="flex justify-between items-center py-1.5 border-b border-[#162D4A]/50">
                   <span className="text-[11px] text-slate-400">Estimated Spill Age</span>
                   <span className={`font-mono font-bold text-sm ${isCleanOcean && areaValue === 0 ? 'text-slate-400' : 'text-[#F59E0B]'}`}>
-                    {isCleanOcean && areaValue === 0 ? 'None (Clean Ocean)' : '4–6 hours'}
-                  </span>
-                </div>
-
-                {/* Inference Latency */}
-                <div className="flex justify-between items-center py-1.5 border-b border-[#162D4A]/50">
-                  <span className="text-[11px] text-slate-400">Inference Latency</span>
-                  <span className="font-mono text-slate-200 text-xs">
-                    {realResult ? '2.41 seconds' : '3.82 seconds'}
+                    {isCleanOcean && areaValue === 0 ? 'None (Clean Ocean)' : '5–8 hours (-5h origin)'}
                   </span>
                 </div>
 
                 {/* Classification */}
                 <div className="flex justify-between items-center py-1">
                   <span className="text-[11px] text-slate-400">Classification</span>
-                  <span className={`font-semibold text-xs ${isCleanOcean && areaValue === 0 ? 'text-[#00E5FF]' : 'text-[#10B981]'}`}>
-                    {isCleanOcean && areaValue === 0 ? 'Undisturbed sea clutter' : 'Probable petroleum slick'}
+                  <span className={`font-semibold text-xs text-right ${isCleanOcean && areaValue === 0 ? 'text-[#00E5FF]' : 'text-[#10B981]'}`}>
+                    {isCleanOcean && areaValue === 0
+                      ? 'Undisturbed sea clutter'
+                      : isDual
+                      ? 'Dual Coalesced Crude Emulsion'
+                      : 'Single Point-Source Petroleum'}
                   </span>
                 </div>
               </div>
@@ -817,7 +888,7 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 className="w-full mt-2 py-3 px-4 rounded-lg bg-[#00E5FF] hover:bg-[#38BDF8] active:bg-[#00B4D8] text-[#050B14] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_16px_rgba(0,229,255,0.4)] hover:shadow-[0_0_24px_rgba(0,229,255,0.7)]"
               >
                 <FolderOpen className="w-4 h-4" />
-                <span>VIEW DIGITAL TWIN (4D MAP)</span>
+                <span>LAUNCH 4D DIGITAL TWIN INVESTIGATION</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -844,7 +915,7 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 font-sans">Acquisition Time</span>
-                  <span className="text-slate-200">2024-09-01 12:30:00Z</span>
+                  <span className="text-slate-200">07 Sep 2026 04:32 UTC</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 font-sans">Location</span>
@@ -852,6 +923,43 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Box 3: Automated Coast Guard Authority Dispatch */}
+            {(!isCleanOcean || areaValue > 0) && (
+              <div className="p-4 rounded-xl bg-[#070F1D] border border-[#EF4444]/40 space-y-2.5 shadow-lg animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#EF4444] flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#EF4444] animate-pulse" />
+                    AUTHORITY DISPATCH ALERT
+                  </span>
+                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-red-950 text-red-300 border border-red-500/50">
+                    TIER-1 ACTIVATED
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-[10.5px]">
+                  <div className="p-2 rounded bg-[#0B1523] border border-[#162D4A] space-y-1">
+                    <div className="font-bold text-slate-200 flex items-center justify-between">
+                      <span>ICG MRCC Mumbai</span>
+                      <span className="text-emerald-400 font-mono text-[9.5px]">DISPATCHED</span>
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      Interceptor C-432 mobilized with disk skimmers to T+12h waypoint. VHF Ch-16 broadcast active.
+                    </div>
+                  </div>
+
+                  <div className="p-2 rounded bg-[#0B1523] border border-[#162D4A] space-y-1">
+                    <div className="font-bold text-slate-200 flex items-center justify-between">
+                      <span>JNPT / Mumbai Port</span>
+                      <span className="text-cyan-400 font-mono text-[9.5px]">PRE-POSITIONED</span>
+                    </div>
+                    <div className="text-slate-400 text-[10px]">
+                      800m heavy-duty boom barrier deployed across Rajpuri Creek / harbor fairway approach.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

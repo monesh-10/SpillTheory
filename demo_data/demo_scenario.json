@@ -1,67 +1,78 @@
 {
   "spill_event": {
-    "spill_id": "SPILL_001",
-    "timestamp": "2026-09-01T12:30:00Z",
+    "spill_id": "OCN-042",
+    "timestamp": "2026-09-07T04:32:00Z",
+    "location_name": "Offshore Mumbai Basin (Arabian Sea)",
     "geometry": {
       "type": "Polygon",
       "coordinates": [
         [
-          [72.44, 18.11],
-          [72.47, 18.11],
-          [72.48, 18.14],
-          [72.45, 18.15],
-          [72.44, 18.11]
+          [72.451, 18.135],
+          [72.472, 18.128],
+          [72.486, 18.118],
+          [72.492, 18.102],
+          [72.484, 18.089],
+          [72.468, 18.082],
+          [72.449, 18.091],
+          [72.438, 18.109],
+          [72.442, 18.126],
+          [72.451, 18.135]
         ]
       ]
     },
-    "area_km2": 4.2,
-    "centroid": {"lat": 18.123, "lon": 72.456},
-    "confidence": 0.92,
-    "estimated_age_hours": 4.0
+    "area_km2": 13.48,
+    "centroid": {"lat": 18.112, "lon": 72.464},
+    "confidence": 0.947,
+    "estimated_age_hours": 5.5,
+    "topology": "DUAL_MERGED",
+    "classification": "Dual-Source Petroleum Coalescence (2 Ships Merged)"
   },
   "hindcast": {
     "origin_estimate": {
-      "point": {"lat": 18.100, "lon": 72.400},
-      "time": "2026-09-01T08:15:00Z",
-      "time_window": ["2026-09-01T06:00:00Z", "2026-09-01T10:00:00Z"],
-      "confidence": 0.68
+      "point": {"lat": 18.065, "lon": 72.395},
+      "time": "2026-09-07T02:47:00Z",
+      "time_window": ["2026-09-07T02:00:00Z", "2026-09-07T03:30:00Z"],
+      "confidence": 0.917,
+      "secondary_point": {"lat": 18.050, "lon": 72.415}
     }
   },
   "drift": {
     "forecast": [
-      {"timestamp": "2026-09-01T12:30:00Z", "point": {"lat": 18.123, "lon": 72.456}},
-      {"timestamp": "2026-09-01T14:30:00Z", "point": {"lat": 18.130, "lon": 72.470}},
-      {"timestamp": "2026-09-01T16:30:00Z", "point": {"lat": 18.140, "lon": 72.500}},
-      {"timestamp": "2026-09-01T18:30:00Z", "point": {"lat": 18.145, "lon": 72.520}},
-      {"timestamp": "2026-09-01T22:30:00Z", "point": {"lat": 18.150, "lon": 72.540}},
-      {"timestamp": "2026-09-02T04:30:00Z", "point": {"lat": 18.165, "lon": 72.580}}
+      {"forecast_hour": 0, "timestamp": "2026-09-07T04:32:00Z", "point": {"lat": 18.112, "lon": 72.464}, "area_km2": 13.48},
+      {"forecast_hour": 3, "timestamp": "2026-09-07T07:32:00Z", "point": {"lat": 18.135, "lon": 72.498}, "area_km2": 18.20},
+      {"forecast_hour": 6, "timestamp": "2026-09-07T10:32:00Z", "point": {"lat": 18.158, "lon": 72.532}, "area_km2": 22.50},
+      {"forecast_hour": 12, "timestamp": "2026-09-07T16:32:00Z", "point": {"lat": 18.204, "lon": 72.600}, "area_km2": 34.50},
+      {"forecast_hour": 18, "timestamp": "2026-09-07T22:32:00Z", "point": {"lat": 18.250, "lon": 72.668}, "area_km2": 44.00},
+      {"forecast_hour": 24, "timestamp": "2026-09-08T04:32:00Z", "point": {"lat": 18.280, "lon": 72.715}, "area_km2": 54.00},
+      {"forecast_hour": 36, "timestamp": "2026-09-08T16:32:00Z", "point": {"lat": 18.284, "lon": 72.795}, "area_km2": 68.00},
+      {"forecast_hour": 48, "timestamp": "2026-09-09T04:32:00Z", "point": {"lat": 18.288, "lon": 72.875}, "area_km2": 82.00}
     ]
   },
   "ais": {
     "vessel_tracks": [
       {
-        "mmsi": 412345678,
-        "name": "Vessel A (Tanker)",
-        "type": "Tanker",
+        "mmsi": 419001284,
+        "name": "MT OCEAN STAR",
+        "type": "Crude Oil Tanker",
+        "flag": "Liberia",
         "path": [
-          {"timestamp": "2026-09-01T06:00:00Z", "lat": 18.050, "lon": 72.350, "heading": 45},
-          {"timestamp": "2026-09-01T08:00:00Z", "lat": 18.090, "lon": 72.390, "heading": 45},
-          {"timestamp": "2026-09-01T08:15:00Z", "lat": 18.100, "lon": 72.400, "heading": 90},
-          {"timestamp": "2026-09-01T09:00:00Z", "lat": 18.100, "lon": 72.405, "heading": 90},
-          {"timestamp": "2026-09-01T12:30:00Z", "lat": 18.135, "lon": 72.440, "heading": 45},
-          {"timestamp": "2026-09-02T04:30:00Z", "lat": 18.180, "lon": 72.490, "heading": 45}
+          {"timestamp": "2026-09-07T01:42:00Z", "lat": 18.180, "lon": 72.280, "heading": 125, "sog": 11.4},
+          {"timestamp": "2026-09-07T02:18:00Z", "lat": 18.122, "lon": 72.338, "heading": 125, "sog": 11.4},
+          {"timestamp": "2026-09-07T02:47:00Z", "lat": 18.065, "lon": 72.395, "heading": 125, "sog": 11.4},
+          {"timestamp": "2026-09-07T03:30:00Z", "lat": 17.980, "lon": 72.480, "heading": 125, "sog": 11.4},
+          {"timestamp": "2026-09-07T04:32:00Z", "lat": 17.895, "lon": 72.565, "heading": 125, "sog": 11.4}
         ]
       },
       {
-        "mmsi": 987654321,
-        "name": "Vessel B (Cargo)",
-        "type": "Cargo",
+        "mmsi": 419002931,
+        "name": "GULF VOYAGER",
+        "type": "Chemical/Oil Products Tanker",
+        "flag": "Marshall Islands",
         "path": [
-          {"timestamp": "2026-09-01T06:00:00Z", "lat": 18.200, "lon": 72.300, "heading": 135},
-          {"timestamp": "2026-09-01T08:00:00Z", "lat": 18.160, "lon": 72.360, "heading": 135},
-          {"timestamp": "2026-09-01T10:00:00Z", "lat": 18.120, "lon": 72.420, "heading": 135},
-          {"timestamp": "2026-09-01T12:30:00Z", "lat": 18.090, "lon": 72.460, "heading": 135},
-          {"timestamp": "2026-09-02T04:30:00Z", "lat": 18.000, "lon": 72.600, "heading": 135}
+          {"timestamp": "2026-09-07T01:40:00Z", "lat": 17.960, "lon": 72.490, "heading": 310, "sog": 10.8},
+          {"timestamp": "2026-09-07T02:35:00Z", "lat": 18.050, "lon": 72.415, "heading": 310, "sog": 10.8},
+          {"timestamp": "2026-09-07T03:20:00Z", "lat": 18.140, "lon": 72.340, "heading": 310, "sog": 10.8},
+          {"timestamp": "2026-09-07T04:32:00Z", "lat": 18.230, "lon": 72.260, "heading": 310, "sog": 10.8}
         ]
       }
     ]
@@ -69,21 +80,50 @@
   "attribution": {
     "candidates": [
       {
-        "mmsi": 412345678,
-        "name": "Vessel A (Tanker)",
-        "score": 0.85,
+        "mmsi": 419001284,
+        "name": "MT OCEAN STAR",
+        "score": 0.917,
         "evidence": {
-          "proximity_score": 0.92,
-          "trajectory_score": 0.88,
-          "anomaly_score": 0.75
+          "proximity_score": 0.96,
+          "trajectory_score": 0.94,
+          "anomaly_score": 0.87
+        }
+      },
+      {
+        "mmsi": 419002931,
+        "name": "GULF VOYAGER",
+        "score": 0.764,
+        "evidence": {
+          "proximity_score": 0.84,
+          "trajectory_score": 0.78,
+          "anomaly_score": 0.72
         }
       }
     ]
   },
   "sar_metadata": {
     "image_url": "http://localhost:8000/demo_data/palsar_0.png",
-    "sensor": "ALOS PALSAR / Sentinel-1 SAR",
+    "sensor": "Sentinel-1 C-Band SAR / ALOS PALSAR",
     "resolution": "12.5m pixel spacing",
-    "reason": "Deep-learning U-Net detected high-contrast dark radar backscatter depression (-9.4 dB dampening). Capillary and short-gravity surface waves are dampened by viscous hydrocarbon film, producing specular reflection away from satellite radar sensor. Morphological continuity verifies active petroleum discharge rather than biogenic look-alike."
+    "coverage_percent": 6.8,
+    "confidence": 0.947,
+    "num_sources": 2,
+    "reason": "Deep-learning U-Net detected high-contrast dark radar backscatter depression. Spatial deconvolution verifies two distinct historical discharge sources (MT Ocean Star & Gulf Voyager) that advected and coalesced into a single 13.48 km² anomaly."
+  },
+  "authority_dispatch": {
+    "status": "EMERGENCY_DISPATCH_ACTIVE",
+    "priority": "CRITICAL_TIER_1",
+    "icg_station": "MRCC Mumbai (Indian Coast Guard West Region)",
+    "notified_units": [
+      "ICGS Samudra Prahari (Pollution Control Vessel)",
+      "Dornier 228 CG-764 (Air Recon Squadron)",
+      "JNPT Port Marine Operations Center",
+      "Maharashtra Pollution Control Board (MPCB)"
+    ],
+    "actions_mandated": [
+      "Deploy 1,200m offshore containment booms at +24h risk intercept corridor",
+      "Issue MARPOL Annex I violation subpoena to MT OCEAN STAR (IMO 9384910)",
+      "Inspect oily water separator (OWS) bilge discharge logs of GULF VOYAGER (IMO 9412089)"
+    ]
   }
 }

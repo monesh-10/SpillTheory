@@ -170,6 +170,8 @@ export const App: React.FC = () => {
           {(currentPage === 'overview' || currentPage === 'live-twin') && (
             <DashboardView
               incident={currentIncident}
+              allIncidents={allIncidents}
+              onSelectIncident={(inc) => setCurrentIncident(inc)}
               vessels={vessels}
               selectedVessel={selectedVessel}
               onSelectVessel={(v) => setSelectedVessel(v)}
@@ -202,6 +204,8 @@ export const App: React.FC = () => {
           {currentPage === 'hindcast' && (
             <DashboardView
               incident={currentIncident}
+              allIncidents={allIncidents}
+              onSelectIncident={(inc) => setCurrentIncident(inc)}
               vessels={vessels}
               selectedVessel={selectedVessel}
               onSelectVessel={(v) => setSelectedVessel(v)}

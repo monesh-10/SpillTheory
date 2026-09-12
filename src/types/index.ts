@@ -99,6 +99,10 @@ export interface Vessel {
   activityTimeline: VesselActivityEvent[];
   destination: string;
   eta: string;
+  distanceAtReleaseKm?: number;
+  releaseTimestampUtc?: string;
+  releaseCoordinates?: [number, number];
+  temporalConsistency?: 'HIGH' | 'MEDIUM' | 'LOW' | 'TEMPORALLY INCONSISTENT';
 }
 
 export interface ForecastStep {
@@ -200,4 +204,5 @@ export interface MapLayerState {
   shorelineRisk: boolean;
   windVectors: boolean;
   currentVectors: boolean;
+  temporalValidation?: boolean;
 }

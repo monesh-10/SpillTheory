@@ -14,7 +14,7 @@ import {
 export const PRIMARY_INCIDENT: Incident = {
   id: 'OCN-042',
   code: 'SAR_043659',
-  name: 'Offshore Mumbai Basin Discharge',
+  name: 'Offshore Mumbai Dual Coalesced Spill (2 Ships Merged)',
   locationName: 'Offshore Mumbai Basin (Arabian Sea)',
   coordinates: [18.112, 72.464],
   detectedAt: '07 Sep 2026 04:32 UTC',
@@ -22,17 +22,38 @@ export const PRIMARY_INCIDENT: Incident = {
   slickAreaKm2: 13.48,
   slickPerimeterKm: 31.6,
   confidencePercent: 94.7,
-  classification: 'Probable petroleum slick',
+  classification: 'Dual-Source Petroleum Coalescence',
   sensor: 'Sentinel-1 SAR (C-Band Interferometric Wide)',
   status: 'UNDER INVESTIGATION',
   priority: 'HIGH',
   backscatterDb: -9.2,
-  model: 'OceanTrace-Seg v1.4 (U-Net Multi-Res)',
-  summary: 'Persistent dark oceanic backscatter anomaly detected during Sentinel-1 morning ascending pass. Backscatter damping of 5.8 dB indicates dense hydrocarbon damping of capillary ripples. Surface morphology demonstrates wind-driven tailing oriented toward Southeast.'
+  model: 'OceanTrace-Seg v1.4 (Multi-Source GMM)',
+  summary: 'Merged oceanic backscatter anomaly. Spatial deconvolution indicates two distinct historical discharge sources (MT Ocean Star & Gulf Voyager) that advected and coalesced into a single 13.48 km² anomaly.'
+};
+
+export const SINGLE_SPILL_INCIDENT: Incident = {
+  id: 'OCN-043',
+  code: 'SAR_043701',
+  name: 'Offshore Mumbai Single Point-Source Spill (1 Ship)',
+  locationName: 'Offshore Mumbai Basin (Arabian Sea)',
+  coordinates: [18.112, 72.464],
+  detectedAt: '07 Sep 2026 04:32 UTC',
+  estimatedAgeHours: '5–8 hours',
+  slickAreaKm2: 8.25,
+  slickPerimeterKm: 22.4,
+  confidencePercent: 95.8,
+  classification: 'Single Point-Source Petroleum Slick',
+  sensor: 'Sentinel-1 SAR (C-Band Interferometric Wide)',
+  status: 'UNDER INVESTIGATION',
+  priority: 'HIGH',
+  backscatterDb: -9.4,
+  model: 'OceanTrace-Seg v1.4 (Single-Source U-Net)',
+  summary: 'Single isolated dark patch detected. Reconstructed reverse Lagrangian trajectory attributes discharge solely to MT Ocean Star (91.7% confidence).'
 };
 
 export const ALL_INCIDENTS: Incident[] = [
   PRIMARY_INCIDENT,
+  SINGLE_SPILL_INCIDENT,
   {
     id: 'OCN-041',
     code: 'SAR_043612',
@@ -93,15 +114,13 @@ export const PRIMARY_METOCEAN: MetOceanTelemetry = {
 };
 
 // Generates 500 stochastic Lagrangian particles distributed around origin
-const generateParticleCloud = (): [number, number][] => {
-  const originLat = 18.041;
-  const originLng = 72.512;
+const generateParticleCloud = (originLat: number = 18.065, originLng: number = 72.395): [number, number][] => {
   const particles: [number, number][] = [];
   
   // Seeded deterministic generation
   for (let i = 0; i < 350; i++) {
     const angle = (i * 137.5 * Math.PI) / 180;
-    const r = (Math.sqrt(i) / Math.sqrt(350)) * 0.038;
+    const r = (Math.sqrt(i) / Math.sqrt(350)) * 0.032;
     const latOffset = r * Math.sin(angle) * 0.85;
     const lngOffset = r * Math.cos(angle) * 1.15;
     particles.push([
@@ -114,21 +133,21 @@ const generateParticleCloud = (): [number, number][] => {
 
 export const PRIMARY_HINDCAST: HindcastResult = {
   incidentId: 'OCN-042',
-  originCoordinates: [18.041, 72.512],
+  originCoordinates: [18.065, 72.395],
   originRegionName: 'Probable Source Region (90% Uncertainty Envelope)',
   confidencePercent: 78.2,
-  dischargeWindowUtc: '02:10–03:40 UTC',
+  dischargeWindowUtc: '02:30–03:00 UTC',
   particleCount: 500,
-  uncertaintyRadiusKm: 3.96,
-  estimatedSpillAgeRange: '5.2 – 6.5 hours',
+  uncertaintyRadiusKm: 3.5,
+  estimatedSpillAgeRange: '5.2 – 6.0 hours',
   trajectoryWaypoints: [
-    [18.112, 72.464], // Current slick center
-    [18.095, 72.478],
-    [18.077, 72.492],
-    [18.058, 72.503],
-    [18.041, 72.512]  // Estimated Origin
+    [18.112, 72.464], // Current slick center at detection (t=0)
+    [18.100, 72.447],
+    [18.088, 72.430],
+    [18.076, 72.412],
+    [18.065, 72.395]  // Estimated Origin #1 (Aligned with MT Ocean Star Track at 02:47 UTC)
   ],
-  particleCloud: generateParticleCloud()
+  particleCloud: generateParticleCloud(18.065, 72.395)
 };
 
 export const SLICK_POLYGON: [number, number][] = [
@@ -156,11 +175,15 @@ export const SUSPECT_VESSELS: Vessel[] = [
     type: 'Crude Oil Tanker',
     lengthM: 248,
     beamM: 42,
-    currentCoordinates: [17.924, 72.715],
+    currentCoordinates: [17.895, 72.565],
     currentSpeedKt: 11.4,
-    currentHeadingDeg: 120,
-    distanceFromOriginKm: 2.8,
-    timeDiffMinutes: 17,
+    currentHeadingDeg: 125,
+    distanceFromOriginKm: 24.8,
+    distanceAtReleaseKm: 0.12,
+    releaseTimestampUtc: '02:47 UTC',
+    releaseCoordinates: [18.065, 72.395],
+    temporalConsistency: 'HIGH',
+    timeDiffMinutes: 0,
     rank: 1,
     investigationPriority: 'HIGH',
     attributionScore: 91.7,
@@ -175,19 +198,18 @@ export const SUSPECT_VESSELS: Vessel[] = [
     destination: 'JNPT MUMBAI',
     eta: '07 Sep 2026 18:00 UTC',
     track: [
-      { lat: 18.210, lng: 72.310, timestampUtc: '01:42 UTC', speedKt: 12.4, headingDeg: 125 },
-      { lat: 18.145, lng: 72.410, timestampUtc: '02:18 UTC', speedKt: 5.8, headingDeg: 145 },
-      { lat: 18.080, lng: 72.485, timestampUtc: '02:31 UTC', speedKt: 6.2, headingDeg: 160 },
-      { lat: 18.048, lng: 72.525, timestampUtc: '02:47 UTC', speedKt: 7.1, headingDeg: 120 },
-      { lat: 17.985, lng: 72.610, timestampUtc: '03:05 UTC', speedKt: 10.9, headingDeg: 120 },
-      { lat: 17.924, lng: 72.715, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 120 }
+      { lat: 18.180, lng: 72.280, timestampUtc: '01:42 UTC', speedKt: 11.4, headingDeg: 125 },
+      { lat: 18.122, lng: 72.338, timestampUtc: '02:18 UTC', speedKt: 11.4, headingDeg: 125 },
+      { lat: 18.065, lng: 72.395, timestampUtc: '02:47 UTC', speedKt: 11.4, headingDeg: 125 },
+      { lat: 17.980, lng: 72.480, timestampUtc: '03:30 UTC', speedKt: 11.4, headingDeg: 125 },
+      { lat: 17.895, lng: 72.565, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 125 }
     ],
     activityTimeline: [
-      { timestampUtc: '01:42 UTC', description: 'Vessel enters forensic tracking corridor from North-West', isAnomaly: false, type: 'ENTER_SECTOR' },
-      { timestampUtc: '02:18 UTC', description: 'Significant speed reduction: drops abruptly from 12.4 kn to 5.8 kn in open sea', isAnomaly: true, type: 'SPEED_DROP' },
-      { timestampUtc: '02:31 UTC', description: 'Course deviation of 35° detected without navigational obstacle or VTS advisement', isAnomaly: true, type: 'COURSE_DEVIATION' },
-      { timestampUtc: '02:47 UTC', description: 'Vessel transits within 2.8 km of the probabilistic hindcast origin core', isAnomaly: true, type: 'ORIGIN_PROXIMITY' },
-      { timestampUtc: '03:05 UTC', description: 'Accelerates to 10.9 kn and resumes designated offshore transit heading (071°)', isAnomaly: false, type: 'RESUME_COURSE' }
+      { timestampUtc: '01:42 UTC', description: 'Vessel enters forensic tracking corridor from North-West heading 125°', isAnomaly: false, type: 'ENTER_SECTOR' },
+      { timestampUtc: '02:18 UTC', description: 'Approaching offshore sector along designated commercial corridor', isAnomaly: false, type: 'ENTER_SECTOR' },
+      { timestampUtc: '02:47 UTC', description: 'Direct transit through probabilistic hindcast origin centroid at 02:47 UTC', isAnomaly: true, type: 'ORIGIN_PROXIMITY' },
+      { timestampUtc: '03:30 UTC', description: 'Continued transit along 125° corridor towards destination', isAnomaly: false, type: 'RESUME_COURSE' },
+      { timestampUtc: '04:32 UTC', description: 'Present AIS position at SAR satellite acquisition epoch', isAnomaly: false, type: 'RESUME_COURSE' }
     ]
   },
   {
@@ -201,10 +223,14 @@ export const SUSPECT_VESSELS: Vessel[] = [
     type: 'Chemical/Oil Products Tanker',
     lengthM: 182,
     beamM: 28,
-    currentCoordinates: [18.241, 72.285],
+    currentCoordinates: [18.230, 72.260],
     currentSpeedKt: 10.8,
     currentHeadingDeg: 310,
-    distanceFromOriginKm: 6.2,
+    distanceFromOriginKm: 26.2,
+    distanceAtReleaseKm: 0.18,
+    releaseTimestampUtc: '02:35 UTC',
+    releaseCoordinates: [18.050, 72.415],
+    temporalConsistency: 'HIGH',
     timeDiffMinutes: 44,
     rank: 2,
     investigationPriority: 'HIGH',
@@ -220,14 +246,14 @@ export const SUSPECT_VESSELS: Vessel[] = [
     destination: 'FUJAIRAH',
     eta: '09 Sep 2026 06:00 UTC',
     track: [
-      { lat: 17.980, lng: 72.620, timestampUtc: '01:50 UTC', speedKt: 11.2, headingDeg: 308 },
-      { lat: 18.062, lng: 72.540, timestampUtc: '02:35 UTC', speedKt: 10.6, headingDeg: 312 },
-      { lat: 18.150, lng: 72.410, timestampUtc: '03:20 UTC', speedKt: 10.9, headingDeg: 309 },
-      { lat: 18.241, lng: 72.285, timestampUtc: '04:32 UTC', speedKt: 10.8, headingDeg: 310 }
+      { lat: 17.960, lng: 72.490, timestampUtc: '01:40 UTC', speedKt: 11.2, headingDeg: 310 },
+      { lat: 18.050, lng: 72.415, timestampUtc: '02:35 UTC', speedKt: 10.6, headingDeg: 310 },
+      { lat: 18.140, lng: 72.340, timestampUtc: '03:20 UTC', speedKt: 10.9, headingDeg: 310 },
+      { lat: 18.230, lng: 72.260, timestampUtc: '04:32 UTC', speedKt: 10.8, headingDeg: 310 }
     ],
     activityTimeline: [
-      { timestampUtc: '01:50 UTC', description: 'Vessel transiting standard northbound tanker channel', isAnomaly: false, type: 'ENTER_SECTOR' },
-      { timestampUtc: '02:35 UTC', description: 'Passed 6.2 km east of origin centroid during estimated release window', isAnomaly: true, type: 'ORIGIN_PROXIMITY' },
+      { timestampUtc: '01:40 UTC', description: 'Vessel transiting standard northbound tanker channel', isAnomaly: false, type: 'ENTER_SECTOR' },
+      { timestampUtc: '02:35 UTC', description: 'Passed through origin centroid #2 during estimated release window', isAnomaly: true, type: 'ORIGIN_PROXIMITY' },
       { timestampUtc: '03:40 UTC', description: 'Maintained steady speed and heading throughout sector exit', isAnomaly: false, type: 'RESUME_COURSE' }
     ]
   },
@@ -246,6 +272,10 @@ export const SUSPECT_VESSELS: Vessel[] = [
     currentSpeedKt: 12.2,
     currentHeadingDeg: 220,
     distanceFromOriginKm: 9.8,
+    distanceAtReleaseKm: 9.8,
+    releaseTimestampUtc: '02:47 UTC',
+    releaseCoordinates: [18.065, 72.395],
+    temporalConsistency: 'TEMPORALLY INCONSISTENT',
     timeDiffMinutes: 72,
     rank: 3,
     investigationPriority: 'MEDIUM',
@@ -285,6 +315,10 @@ export const SUSPECT_VESSELS: Vessel[] = [
     currentSpeedKt: 13.1,
     currentHeadingDeg: 145,
     distanceFromOriginKm: 14.5,
+    distanceAtReleaseKm: 14.5,
+    releaseTimestampUtc: '02:47 UTC',
+    releaseCoordinates: [18.065, 72.395],
+    temporalConsistency: 'TEMPORALLY INCONSISTENT',
     timeDiffMinutes: 110,
     rank: 4,
     investigationPriority: 'LOW',
@@ -322,6 +356,10 @@ export const SUSPECT_VESSELS: Vessel[] = [
     currentSpeedKt: 8.4,
     currentHeadingDeg: 90,
     distanceFromOriginKm: 24.1,
+    distanceAtReleaseKm: 24.1,
+    releaseTimestampUtc: '02:47 UTC',
+    releaseCoordinates: [18.065, 72.395],
+    temporalConsistency: 'TEMPORALLY INCONSISTENT',
     timeDiffMinutes: 180,
     rank: 5,
     investigationPriority: 'CLEARED',
@@ -357,64 +395,100 @@ export const FORECAST_STEPS: ForecastStep[] = [
     polygonCoordinates: SLICK_POLYGON
   },
   {
+    stepHours: 3,
+    label: '+3H',
+    timeUtc: '07 Sep 07:32 UTC',
+    estimatedAreaKm2: 18.20,
+    centerCoordinates: [18.135, 72.498],
+    uncertaintyRadiusKm: 2.0,
+    polygonCoordinates: [
+      [18.158, 72.485],
+      [18.152, 72.512],
+      [18.136, 72.522],
+      [18.120, 72.515],
+      [18.112, 72.492],
+      [18.125, 72.478],
+      [18.145, 72.472],
+      [18.158, 72.485]
+    ]
+  },
+  {
     stepHours: 6,
     label: '+6H',
     timeUtc: '07 Sep 10:32 UTC',
-    estimatedAreaKm2: 17.20,
-    centerCoordinates: [18.148, 72.522],
+    estimatedAreaKm2: 22.50,
+    centerCoordinates: [18.158, 72.532],
     uncertaintyRadiusKm: 2.8,
     polygonCoordinates: [
-      [18.175, 72.505],
-      [18.168, 72.535],
-      [18.152, 72.552],
-      [18.132, 72.548],
-      [18.121, 72.520],
-      [18.135, 72.498],
-      [18.160, 72.492],
-      [18.175, 72.505]
+      [18.182, 72.518],
+      [18.175, 72.548],
+      [18.160, 72.560],
+      [18.140, 72.555],
+      [18.130, 72.528],
+      [18.145, 72.508],
+      [18.168, 72.502],
+      [18.182, 72.518]
     ]
   },
   {
     stepHours: 12,
     label: '+12H',
     timeUtc: '07 Sep 16:32 UTC',
-    estimatedAreaKm2: 22.80,
-    centerCoordinates: [18.192, 72.601],
+    estimatedAreaKm2: 34.50,
+    centerCoordinates: [18.204, 72.600],
     uncertaintyRadiusKm: 4.6,
     polygonCoordinates: [
-      [18.225, 72.580],
-      [18.216, 72.625],
-      [18.195, 72.645],
-      [18.170, 72.635],
-      [18.162, 72.595],
-      [18.178, 72.565],
-      [18.210, 72.560],
-      [18.225, 72.580]
+      [18.235, 72.582],
+      [18.225, 72.625],
+      [18.205, 72.645],
+      [18.180, 72.635],
+      [18.172, 72.595],
+      [18.188, 72.565],
+      [18.220, 72.562],
+      [18.235, 72.582]
+    ]
+  },
+  {
+    stepHours: 18,
+    label: '+18H',
+    timeUtc: '07 Sep 22:32 UTC',
+    estimatedAreaKm2: 44.00,
+    centerCoordinates: [18.250, 72.668],
+    uncertaintyRadiusKm: 5.9,
+    polygonCoordinates: [
+      [18.288, 72.645],
+      [18.275, 72.705],
+      [18.250, 72.725],
+      [18.222, 72.708],
+      [18.215, 72.652],
+      [18.235, 72.622],
+      [18.270, 72.618],
+      [18.288, 72.645]
     ]
   },
   {
     stepHours: 24,
     label: '+24H',
     timeUtc: '08 Sep 04:32 UTC',
-    estimatedAreaKm2: 31.40,
-    centerCoordinates: [18.245, 72.715],
+    estimatedAreaKm2: 54.00,
+    centerCoordinates: [18.280, 72.715],
     uncertaintyRadiusKm: 7.2,
     polygonCoordinates: [
-      [18.285, 72.685],
-      [18.272, 72.755],
-      [18.245, 72.780],
-      [18.215, 72.765],
-      [18.205, 72.700],
-      [18.230, 72.665],
-      [18.268, 72.660],
-      [18.285, 72.685]
+      [18.320, 72.685],
+      [18.305, 72.755],
+      [18.280, 72.775],
+      [18.250, 72.755],
+      [18.245, 72.695],
+      [18.265, 72.665],
+      [18.300, 72.658],
+      [18.320, 72.685]
     ]
   },
   {
     stepHours: 48,
     label: '+48H',
     timeUtc: '09 Sep 04:32 UTC',
-    estimatedAreaKm2: 46.80,
+    estimatedAreaKm2: 82.00,
     centerCoordinates: [18.288, 72.875],
     uncertaintyRadiusKm: 11.5,
     polygonCoordinates: [
