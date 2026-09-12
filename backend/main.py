@@ -178,6 +178,7 @@ def get_scenario(spill_id: str):
             data["spill_event"]["spill_id"] = "OCN-043"
             data["spill_event"]["area_km2"] = 8.25
             data["spill_event"]["classification"] = "Single Point-Source Petroleum Slick (1 Ship)"
+            data["spill_event"]["topology"] = "SINGLE_POINT_SOURCE"
             # Single vessel only
             data["ais"]["vessel_tracks"] = [data["ais"]["vessel_tracks"][0]]
 
