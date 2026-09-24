@@ -66,3 +66,16 @@ ehthumbs.db
 *.swp
 *.swo
 *.zip
+
+# Model weights (do not commit large .pt/.pth files)
+*.pt
+*.pth
+
+# EO temp inference files
+backend/_temp_eo_*.tiff
+demo_data/_eo_pred_*.png
+demo_data/_eo_conf_*.png
+
+# Notebook extraction artifacts
+EO_Context/nb_cells.txt
+EO_Context/model_cell16.txt

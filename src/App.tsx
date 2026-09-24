@@ -12,6 +12,7 @@ import { DataSourcesView } from './views/DataSourcesView';
 import { ModelsView } from './views/ModelsView';
 import { SettingsView } from './views/SettingsView';
 import { LandingPageView } from './views/LandingPageView';
+import { EODetectionView } from './views/EODetectionView';
 import { CommandPalette } from './components/CommandPalette';
 import { NotificationDrawer } from './components/NotificationDrawer';
 import { FullInvestigationModal } from './components/FullInvestigationModal';
@@ -198,6 +199,12 @@ export const App: React.FC = () => {
                 setCurrentIncident(newInc);
                 setCurrentPage('overview');
               }}
+            />
+          )}
+
+          {currentPage === 'eo-detection' && (
+            <EODetectionView
+              onOpenWorkspace={() => setCurrentPage('overview')}
             />
           )}
 

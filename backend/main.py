@@ -11,6 +11,13 @@ from backend.backtracking.particle_backtracking import (
     compute_cloud_r90,
     compute_cloud_centroid
 )
+from backend.eo_router import router as eo_router
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv is optional; EO_MODEL_PATH can still be set in the environment
+
 import json
 import shutil
 import math
@@ -20,6 +27,7 @@ from PIL import Image
 import numpy as np
 
 app = FastAPI(title="SpillTheory 4D Digital Twin API")
+app.include_router(eo_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -128,6 +136,7 @@ def root_endpoint():
             "demo_images": "/api/demo-images",
             "backtracking_benchmark": "/api/backtracking/benchmark",
             "sar_detect": "/api/detect-sar",
+            "eo_detect": "/api/detect-eo",
             "pdf_report": "/api/scenario/{spill_id}/export-pdf"
         },
         "disclaimer": "Engineering heuristic for decision-support; not a calibrated statistical probability."

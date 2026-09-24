@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Compass,
   Satellite,
+  Layers,
   Ship,
   BarChart2,
   Database,
@@ -15,6 +16,7 @@ export type NavigationPage =
   | 'live-twin' 
   | 'incidents' 
   | 'sar-detection' 
+  | 'eo-detection'
   | 'hindcast' 
   | 'attribution' 
   | 'forecast' 
@@ -52,6 +54,12 @@ const TACTICAL_NAV_ITEMS: NavItem[] = [
     activeMatches: ['sar-detection'], 
     label: 'SAR', 
     icon: Satellite 
+  },
+  { 
+    id: 'eo-detection', 
+    activeMatches: ['eo-detection'], 
+    label: 'EO', 
+    icon: Layers 
   },
   { 
     id: 'attribution', 

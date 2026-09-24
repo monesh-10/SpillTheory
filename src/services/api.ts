@@ -498,6 +498,26 @@ export const apiService = {
     return SAR_DETECTION_MOCK;
   },
 
+  async runEODetection(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/detect-eo`, {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(60000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      const errJson = await res.json().catch(() => null);
+      const detail = errJson?.detail || `Server error ${res.status}`;
+      return { error: true, message: detail, status: res.status };
+    } catch (err: any) {
+      return { error: true, message: err?.message || 'Network error' };
+    }
+  },
+
   getPDFDownloadUrl(spillId: string = 'SPILL_001'): string {
     return `${BACKEND_URL}/api/scenario/${spillId}/export-pdf`;
   },
