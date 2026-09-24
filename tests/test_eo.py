@@ -9,7 +9,6 @@ warnings.filterwarnings('ignore')
 
 from pathlib import Path
 import numpy as np
-import pytest
 
 from eo.model import (
     IN_CHANNELS,
@@ -68,21 +67,36 @@ def test_eo_model_architecture_shapes():
     assert out.shape == (1, 15, 240, 240), f"Expected [1, 15, 240, 240], got {out.shape}"
 
 
-def test_eo_validation_rejects_invalid_extensions(tmp_path):
+def test_eo_validation_rejects_invalid_extensions(tmp_path=None):
     """Ensure non-TIFF files are rejected with EOValidationError."""
-    fake_png = tmp_path / "test_image.png"
-    fake_png.write_text("not a real tiff")
-
-    with pytest.raises(EOValidationError) as exc:
-        validate_eo_file(str(fake_png))
-    assert "Expected a TIFF file" in str(exc.value)
+    import tempfile
+    if tmp_path is None:
+        with tempfile.TemporaryDirectory() as td:
+            fake_png = Path(td) / "test_image.png"
+            fake_png.write_text("not a real tiff")
+            try:
+                validate_eo_file(str(fake_png))
+                assert False, "Expected EOValidationError"
+            except EOValidationError as exc:
+                assert "Expected a TIFF file" in str(exc)
+    else:
+        fake_png = Path(tmp_path) / "test_image.png"
+        fake_png.write_text("not a real tiff")
+        try:
+            validate_eo_file(str(fake_png))
+            assert False, "Expected EOValidationError"
+        except EOValidationError as exc:
+            assert "Expected a TIFF file" in str(exc)
 
 
 def test_eo_validation_rejects_nonexistent_file():
     """Ensure missing files raise RuntimeError."""
     missing = Path("nonexistent_satellite_file.tiff")
-    with pytest.raises(RuntimeError):
+    try:
         validate_eo_file(missing)
+        assert False, "Expected RuntimeError"
+    except RuntimeError:
+        pass
 
 
 def test_eo_colormapping_bounds_and_shape():

@@ -201,6 +201,28 @@ def test_eo_scenario_pdf_dossier_export():
 
 def test_eo_active_spills_list_endpoint():
     """Verify /api/spills returns active spills including newly created EO scenarios."""
+    # Ensure at least one EO spill is registered
+    test_spill_id = "EO_TEST_LIST"
+    polygon_coords = [[[72.44, 18.11], [72.46, 18.11], [72.46, 18.13], [72.44, 18.13], [72.44, 18.11]]]
+    build_and_register_spill_scenario(
+        spill_id=test_spill_id,
+        modality="EO",
+        polygon_coords=polygon_coords,
+        center_lat=18.12,
+        center_lon=72.45,
+        calculated_area_km2=5.0,
+        coverage_percent=2.5,
+        confidence=0.95,
+        num_sources=1,
+        source_peaks=[{"x": 128.0, "y": 128.0}],
+        image_url="http://localhost:8000/data/outputs/test_list.png",
+        mask_url="http://localhost:8000/data/outputs/test_list_mask.png",
+        sensor_name="Sentinel-2 MSI Multispectral Optical",
+        resolution_str="10m Ground Sample Distance",
+        detection_reason="Self-contained list endpoint test",
+        is_dual=False,
+    )
+
     resp = get_client().get("/api/spills")
     assert resp.status_code == 200
     spills = resp.json()
