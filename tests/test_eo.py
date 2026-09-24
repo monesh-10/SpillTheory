@@ -4,6 +4,9 @@ Verifies SeaRel-SR-UNet V3 architecture, input validation, 11-band contract,
 normalization constants, and 15-class postprocessing colormaps.
 """
 
+import warnings
+warnings.filterwarnings('ignore')
+
 from pathlib import Path
 import numpy as np
 import pytest
@@ -158,3 +161,21 @@ def test_eo_checkpoint_loading_if_present():
     model, device = get_eo_model()
     assert model is not None
     assert str(device) in ["cpu", "cuda"]
+
+
+if __name__ == "__main__":
+    test_eo_constants_and_dimensions()
+    print("[PASS] test_eo_constants_and_dimensions passed")
+    test_eo_model_architecture_shapes()
+    print("[PASS] test_eo_model_architecture_shapes passed")
+    test_eo_validation_rejects_nonexistent_file()
+    print("[PASS] test_eo_validation_rejects_nonexistent_file passed")
+    test_eo_colormapping_bounds_and_shape()
+    print("[PASS] test_eo_colormapping_bounds_and_shape passed")
+    test_eo_api_response_builder()
+    print("[PASS] test_eo_api_response_builder passed")
+    test_eo_checkpoint_path_resolution()
+    print("[PASS] test_eo_checkpoint_path_resolution passed")
+    test_eo_checkpoint_loading_if_present()
+    print("[PASS] test_eo_checkpoint_loading_if_present passed")
+    print("\nALL EO PIPELINE TESTS PASSED (100%)!")

@@ -205,6 +205,11 @@ export const App: React.FC = () => {
           {currentPage === 'eo-detection' && (
             <EODetectionView
               onOpenWorkspace={() => setCurrentPage('overview')}
+              onSpillDetected={(newInc) => {
+                setAllIncidents(prev => [newInc, ...prev.filter(i => i.id !== newInc.id)]);
+                setCurrentIncident(newInc);
+                setCurrentPage('overview');
+              }}
             />
           )}
 
