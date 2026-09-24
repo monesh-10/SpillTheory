@@ -76,6 +76,5 @@ backend/_temp_eo_*.tiff
 demo_data/_eo_pred_*.png
 demo_data/_eo_conf_*.png
 
-# Notebook extraction artifacts
-EO_Context/nb_cells.txt
-EO_Context/model_cell16.txt
+# EO training context and extraction artifacts
+EO_Context/

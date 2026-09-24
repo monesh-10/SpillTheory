@@ -36,10 +36,13 @@ _DEFAULT_CHECKPOINT = _REPO_ROOT / "EO_Context" / "best_v3_miou.pt"
 
 
 def _resolve_model_path() -> Path:
-    """Resolve EO model path: env var takes priority, then repo default."""
+    """Resolve EO model path: env var takes priority, models/ dir, then EO_Context/ fallback."""
     env_path = os.environ.get("EO_MODEL_PATH", "").strip()
     if env_path:
         return Path(env_path)
+    models_ckpt = _REPO_ROOT / "models" / "best_v3_miou.pt"
+    if models_ckpt.exists():
+        return models_ckpt
     return _DEFAULT_CHECKPOINT
 
 
