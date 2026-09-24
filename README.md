@@ -8,23 +8,21 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg?logo=pytorch)](https://pytorch.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.11-38B2AC.svg?logo=tailwind-css)](https://tailwindcss.com/)
 [![Leaflet](https://img.shields.io/badge/Leaflet-1.9.4-199900.svg?logo=leaflet)](https://leafletjs.com/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
 ## 🌊 Executive Overview
 
-**SpillTheory** is an enterprise-grade cyber-maritime tactical intelligence and environmental defense digital twin. It features dual independent satellite observation modalities:
+**SpillTheory** is an enterprise-grade cyber-maritime tactical intelligence and environmental defense platform. It equips coastal defense authorities and environmental agencies with automated satellite spill detection, forward drift forecasting, reverse origin backtracking, and kinematic AIS vessel attribution.
 
-1. **Spaceborne Synthetic Aperture Radar (SAR)** deep learning segmentation (Sentinel-1 C-Band & ALOS PALSAR L-Band) for all-weather day/night slick delineation.
-2. **Optical Earth Observation (EO)** multispectral semantic segmentation via **SeaRel-SR-UNet V3** (Sentinel-2 L2R 11-band MSI), resolving 15 marine surface classes including thin slicks, thick oil, marine debris, and algal blooms.
-3. **Autonomous Source Deconvolution** that identifies whether a SAR slick originated from a single vessel or two coalesced ships via morphological peak and bottleneck necking topology.
-4. **Calibrated MetOcean Coastal Hydrodynamics** modeling live windage, surface currents, and tidal harmonics from the Open-Meteo API.
-5. **Physical Fay Spreading Expansion** ($r(t) \propto t^{3/4}$) simulating accurate viscous-surface tension oil growth across a +48-hour forward horizon.
-6. **4D Virtual Lagrangian Particle Tracking** featuring 150+ particle swarms with stochastic Brownian eddy diffusion and reverse trajectory backtracking to pinpoint discharge origins.
-7. **Kinematic AIS Anomaly Attribution** identifying polluters by detecting speed drop anomalies and course deviations during illicit discharge windows.
-8. **Statutory Maritime Legal Dossier Generation** delivering cryptographic SHA-256 tamper-evident PDF briefs for the Indian Coast Guard (ICG) and Directorate General of Shipping (DGS).
+The platform provides two completely **independent satellite observation workflows**:
+
+1. **Synthetic Aperture Radar (SAR)**: Spaceborne radar backscatter damping analysis (Sentinel-1 C-Band & ALOS PALSAR L-Band) for 24/7 all-weather day/night slick delineation and morphological source deconvolution (single ship vs. dual coalesced leaks).
+2. **Optical Earth Observation (EO)**: High-resolution multispectral semantic segmentation via **SeaRel-SR-UNet V3** (Sentinel-2 L2R 11-band MSI), resolving 15 marine surface classes including thin slicks, thick oil, marine debris, and algal blooms.
+
+> **Note on Workflow Independence**: SAR and EO operate as separate, decoupled pipelines. The user selects either SAR or EO from the tactical navigation rail. There is no multi-sensor fusion layer in the current scope.
 
 ---
 
@@ -36,7 +34,7 @@ flowchart TD
         SAR[Sentinel-1 / ALOS SAR Imagery]
         EO[Sentinel-2 L2R 11-Band Multispectral TIFF]
         MET[Live MetOcean Weather & Tidal Currents]
-        AIS[Live AIS Vessel Transponder Telemetry]
+        AIS[Simulated AIS Vessel Telemetry]
     end
 
     subgraph SAR_Pipeline [SAR Intelligence Pipeline]
@@ -87,158 +85,193 @@ flowchart TD
 
 ---
 
-## 🔬 Scientific Methodology & Mathematical Formulations
-
-### 1. Optical Earth Observation (EO) — SeaRel-SR-UNet V3
-* **Inputs:** 11 spectral bands from Sentinel-2 L2R reflectance at 240×240 resolution.
-* **Marine Inductive Bias (LSCC):** Local Spectral Contrast Coordinates compute multi-scale annular ring contrasts (inner/outer pairs: `(3,9)`, `(7,21)`, `(15,41)`) to decouple oil surface films from water column turbidity and sun glint.
-* **Spectral Attention Stem:** Dual-branch fusion combining an absolute residual spectral attention stem with a sea-relative contrast branch.
-* **15 Marine Classes:** Marine Debris, Dense Sargassum, Sparse Floating Algae, Natural Organic Material, Ship, **Oil Spill**, Marine Water, Sediment-Laden Water, Foam, Turbid Water, Shallow Water, Waves & Wakes, Oil Platform, Jellyfish, and Sea Snot.
-* **Test-Time Augmentation (TTA):** 4-variant ensemble (identity, horizontal flip, vertical flip, dual flip) averaged in logit space.
-
-### 2. Autonomous Single vs. Dual Ship SAR Deconvolution
-SpillTheory inspects segmented SAR radar masks using computer vision topology:
-* **Euclidean Distance Transform (EDT):** Calculates distance from edges to find deep plume discharge cores.
-* **Peak Detection:** Analyzes local maxima with a minimum spatial separation of $\ge 22\text{ px}$ ($>1.2\text{ km}$).
-* **Bottleneck Necking Ratio ($\eta$):**
-  - $\eta < 0.62$ with two distinct peaks $\rightarrow$ **Dual Ship Coalesced Leak (2 Vessels)**.
-  - Single dominant peak $\rightarrow$ **Single Ship Point-Source Discharge (1 Vessel)**.
-  - Undisturbed Bragg scattering $\rightarrow$ **Clean Ocean Benchmark (0 Vessels · Zero False Alarm)**.
-
-### 3. Physical Fay Viscous-Surface Tension Spreading
-Crude oil spreading on water follows Fay's physical scaling equations:
-* **$t = -300\text{ min}$ (Discharge Epoch):** Nascent seed plume $\sim 2.0\text{ km}^2$ (scale 0.22).
-* **$t = 0\text{ min}$ (Satellite Observation):** Ground-truth detected slick $13.5\text{ km}^2$ (scale 1.00).
-* **$t = +6\text{h}$:** Expands to **$22.5\text{ km}^2$** (scale 1.55).
-* **$t = +12\text{h}$:** Expands to **$34.5\text{ km}^2$** (scale 2.10).
-* **$t = +24\text{h}$:** Expands to **$54.0\text{ km}^2$** (scale 2.85).
-* **$t = +48\text{h}$:** Expands to **$82.0\text{ km}^2$** (scale 3.80).
-
-### 4. Coastal Monsoon Hydrodynamics (Konkan / Raigad Corridor)
-Along the Maharashtra coast (off Murud-Janjira and Alibaug), the Southwest Monsoon surface current and windage transport carry offshore slicks **East-North-East ($058^\circ$ to $068^\circ$) directly towards the Murud-Janjira shoreline ($18.298^\circ\text{N}, 72.962^\circ\text{E}$)**:
-$$V_{\text{spill}} = V_{\text{current}} + 0.03 \times V_{\text{wind}}\quad (\text{with Coriolis deflection})$$
-
-### 5. 4D Lagrangian Particle Engine
-* **150 Active Parcels** (plus 90 parcels for Plume 2 in dual mode) rendered in a dedicated high-z overlay.
-* Dynamic Gaussian turbulent eddy diffusion with $K_h = 10\text{ m}^2/\text{s}$.
-* **On-Map Live HUD Badge:** Real-time telemetry displaying active parcels, advection speed, drift heading, and dynamic footprint.
-
----
-
 ## 📂 Repository Structure
 
 ```
 SpillTheory/
-├── backend/
-│   ├── main.py                     # FastAPI REST API & scenario orchestration
-│   ├── eo_router.py                # Dedicated EO multispectral inference router
+├── README.md                       # Master platform overview & guide
+├── .gitignore                      # Git exclusion rules (weights, caches, outputs)
+├── .env.example                    # Environment configuration template
+├── requirements.txt                # Python backend dependencies
+├── package.json                    # Frontend NPM configuration
+├── package-lock.json               # Locked NPM dependency tree
+├── vite.config.ts                  # Vite build configuration
+├── tsconfig.json                   # TypeScript compiler configuration
+├── tsconfig.node.json              # Node TypeScript configuration
+│
+├── backend/                        # FastAPI REST API Backend
+│   ├── __init__.py                 # Backend package initialization
+│   ├── main.py                     # App routing, scenario engine, static mounts
+│   ├── eo_router.py                # Dedicated EO multispectral inference endpoint
 │   ├── ais_algorithm.py            # Deterministic kinematic proximity & anomaly scoring
-│   ├── metocean.py                 # Live Open-Meteo marine telemetry & drift modeling
+│   ├── metocean.py                 # Live Open-Meteo marine telemetry & Fay drift model
 │   ├── pdf_report.py               # Cryptographic ReportLab forensic dossier generator
 │   └── backtracking/               # Lagrangian particle engine, RK4 & synthetic benchmark
-├── eo/                             # Earth Observation (Multispectral Optical) Module
-│   ├── model.py                    # SeaRel-SR-UNet V3 architecture & LSCC layers
-│   ├── preprocessing.py            # 11-band TIFF ingestion & MADOS z-score normalization
-│   ├── inference.py                # TTAx4 inference pipeline & lazy model loading
-│   └── postprocess.py              # 15-class RGB colormapping & confidence map generation
-├── sar/                            # Synthetic Aperture Radar (Radar Backscatter) Module
+│
+├── sar/                            # SAR Analysis Pipeline
+│   ├── __init__.py                 # SAR module initialization
 │   ├── inference.py                # U-Net SAR inference & topological source deconvolution
 │   ├── preprocessing.py            # Radar backscatter normalization & tensor transformation
 │   ├── postprocess.py              # Connected region morphology & necking ratio analysis
 │   └── geo_convert.py              # Pixel mask to GeoJSON WGS84 polygon projection
-├── models/
-│   ├── unet_oilspill.h5            # Pretrained U-Net SAR deep segmentation weights
-│   └── best_v3_miou.pt             # Pretrained EO SeaRel-SR-UNet V3 weights (optional local)
-├── docs/                           # Official Technical Specifications & Presentations
-│   ├── SpillTheory_4D_Digital_Twin_Logic_Specification.pdf
-│   └── SpillTheory_Presentation_Script_SIH2026.pdf
-├── demo_data/                      # Real Sentinel-1 & ALOS PALSAR test tiles & scenarios
-├── src/
+│
+├── eo/                             # EO Multispectral Pipeline
+│   ├── __init__.py                 # EO module initialization
+│   ├── model.py                    # SeaRel-SR-UNet V3 architecture & LSCC layers
+│   ├── preprocessing.py            # 11-band TIFF validation & MADOS z-score normalization
+│   ├── inference.py                # TTAx4 inference pipeline & lazy model loading
+│   └── postprocess.py              # 15-class RGB colormapping & confidence map generation
+│
+├── models/                         # Pretrained Deep Learning Weights
+│   ├── sar/
+│   │   ├── README.md               # SAR model documentation
+│   │   └── unet_oilspill.h5        # 2D U-Net SAR segmentation weights
+│   └── eo/
+│       ├── README.md               # EO model placement guide & format description
+│       └── best_v3_miou.pt         # SeaRel-SR-UNet V3 weights (local file, gitignored)
+│
+├── src/                            # Frontend Application (React + TypeScript)
 │   ├── components/                 # MapWorkspace, NavigationRail, CommandBar, Header
 │   ├── views/                      # SpillDetectionView, EODetectionView, DashboardView
 │   ├── services/api.ts             # REST API service client & backend bridge
-│   ├── types/                      # TypeScript domain definitions
+│   ├── types/                      # TypeScript domain interfaces
 │   ├── data/mockData.ts            # Calibrated baseline scenarios & AIS tracks
-│   └── App.tsx                     # Master state controller & routing
-├── index.html                      # HTML5 entrypoint with Leaflet GIS styles
-├── package.json                    # Frontend NPM configuration (Vite + React 18)
-├── requirements.txt                # Python backend dependencies (FastAPI, PyTorch, etc.)
-└── vite.config.ts                  # Vite build configuration
+│   ├── App.tsx                     # Master state controller & routing
+│   └── main.tsx                    # React application entry point
+│
+├── data/                           # Data Assets & Ephemeral Outputs
+│   ├── README.md                   # Data policies and directory structure
+│   ├── samples/                    # Small input samples for testing & demo
+│   │   └── README.md
+│   └── outputs/                    # Runtime-generated prediction masks & maps
+│       └── README.md
+│
+├── notebooks/                      # Research & Training Material
+│   ├── README.md                   # Notebook documentation and reference links
+│   └── mados-sih12345.ipynb        # MADOS training & validation benchmark notebook
+│
+├── docs/                           # Technical Specifications & Documentation
+│   ├── architecture.md             # System design, data flow, and component breakdown
+│   ├── sar.md                      # SAR sensor specs, U-Net, Otsu, and topology rules
+│   ├── eo.md                       # EO 11-band contract, LSCC layers, and 15 classes
+│   ├── evaluation/                 # V3 model validation metrics, CSVs, and summaries
+│   ├── SpillTheory_4D_Digital_Twin_Logic_Specification.pdf
+│   └── SpillTheory_Presentation_Script_SIH2026.pdf
+│
+└── tests/                          # Automated Test Suite
+    ├── README.md                   # Testing instructions and test classification
+    ├── test_sar.py                 # SAR preprocessing, Otsu fallback, and EDT topology
+    ├── test_eo.py                  # EO architecture, validation, colormaps, and TTA
+    ├── test_particle_primary.py    # 4D Lagrangian advection & diffusion physics tests
+    └── test_backend_audit.py       # 15-point exhaustive backend HTTP integration suite
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🛰️ Modality Workflows
 
-### Prerequisites
-* **Python**: 3.10, 3.11, or 3.12+
-* **Node.js**: v18+ & npm
+### SAR Detection Workflow
+1. Navigate to **SAR** in the navigation rail.
+2. Select a pre-loaded demonstration tile from `demo_data/` (e.g., `clean_ocean_no_spill.png`, `palsar_0.png`) or upload a radar backscatter image.
+3. The backend runs U-Net segmentation (or adaptive Otsu thresholding if TensorFlow is unavailable).
+4. Morphological EDT analysis deconvolves whether the slick is single-source, dual-source, or clean water.
+5. The detected anomaly is projected onto the 4D GIS map with live forward drift forecast and reverse trajectory origin backtracking.
+
+### EO Multispectral Workflow
+1. Navigate to **EO** in the navigation rail.
+2. Drag and drop or browse for an **11-band multispectral GeoTIFF** (`.tif` or `.tiff`).
+3. The backend validates 11 bands, resamples to $240 \times 240$, normalizes with MADOS $z$-score statistics, and executes `SeaRel-SR-UNet V3` with 4-way TTA.
+4. View the resulting **15-Class Segmentation Mask** or toggle to the **Confidence Map**.
+5. Inspect the per-class area breakdown and oil spill percentage alert.
 
 ---
 
-### Step 1: Clone & Setup
+## 📥 EO Input Requirements
 
+The EO pipeline requires input files matching the following contract:
+- **Format**: GeoTIFF (`.tif` or `.tiff`)
+- **Band Count**: Exactly **11 spectral bands** (files with $\ne 11$ bands will be rejected with HTTP 422)
+- **Spectral Ordering** (Sentinel-2 L2R MADOS convention):
+  1. B01 (Coastal Aerosol, 443 nm)
+  2. B02 (Blue, 490 nm)
+  3. B03 (Green, 560 nm)
+  4. B04 (Red, 665 nm)
+  5. B05 (Red Edge 1, 705 nm)
+  6. B06 (Red Edge 2, 740 nm)
+  7. B07 (Red Edge 3, 783 nm)
+  8. B08 (NIR, 842 nm)
+  9. B09 (Water Vapour, 945 nm)
+  10. B11 (SWIR 1, 1610 nm)
+  11. B12 (SWIR 2, 2190 nm)
+
+---
+
+## 🚀 Installation & Quick Start
+
+### Prerequisites
+- **Python**: 3.10, 3.11, or 3.12+
+- **Node.js**: v18+ & npm
+
+### 1. Clone & Environment Setup
 ```bash
 git clone https://github.com/monesh-10/SpillTheory.git
 cd SpillTheory
-```
 
----
-
-### Step 2: Environment Configuration (Optional)
-
-Copy `.env.example` to `.env` to configure custom model checkpoints:
-
-```bash
+# Copy environment configuration
 cp .env.example .env
-# Set EO_MODEL_PATH to your .pt weights path if stored externally
 ```
 
----
+### 2. Model Placement
+- **SAR Weights**: Pre-packaged at `models/sar/unet_oilspill.h5`.
+- **EO Weights**: Place your trained SeaRel-SR-UNet V3 checkpoint at:
+  ```
+  models/eo/best_v3_miou.pt
+  ```
+  *(Or specify an external path in `.env` via `EO_MODEL_PATH=/path/to/best_v3_miou.pt`)*
 
-### Step 3: Backend Installation & Launch
-
+### 3. Start Backend Server
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Start FastAPI backend (port 8000)
+# Launch FastAPI on port 8000
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-* **API Server:** http://127.0.0.1:8000
-* **Interactive Swagger Docs:** http://127.0.0.1:8000/docs
+- API Root: `http://127.0.0.1:8000`
+- Swagger Documentation: `http://127.0.0.1:8000/docs`
 
----
-
-### Step 4: Frontend Installation & Launch
-
-Open a second terminal window:
-
+### 4. Start Frontend Application
+In a separate terminal window:
 ```bash
-# Install Node dependencies
+# Install NPM packages
 npm install
 
-# Start Vite development server (port 3000)
+# Launch Vite dev server on port 3000
 npm run dev
 ```
-* **Web UI Dashboard:** http://localhost:3000
+- Tactical Command Center UI: `http://localhost:3000`
 
 ---
 
-## 🧪 Automated Testing & Verification
+## 🧪 Testing & Verification
 
-SpillTheory includes backend test suites and TypeScript type checking:
+SpillTheory provides comprehensive test suites:
 
 ```bash
-# Run backend audit test suite
+# Run all tests
 pytest tests/ -v
 
-# Verify Python bytecode across all modules
-python -m py_compile backend/main.py backend/eo_router.py eo/*.py sar/*.py
+# Run SAR tests independently
+pytest tests/test_sar.py -v
 
-# Verify TypeScript frontend compilation
+# Run EO tests independently
+pytest tests/test_eo.py -v
+
+# Verify Python syntax across all modules
+python -m py_compile backend/*.py sar/*.py eo/*.py tests/*.py
+
+# Verify TypeScript compilation
 npx tsc --noEmit
-# Exits with 0 errors
 ```
 
 ---
@@ -257,14 +290,26 @@ npx tsc --noEmit
 
 ---
 
-## 📜 Documentation & Presentations
+## ⚠️ Known Limitations
 
-Official dossiers generated for Smart India Hackathon (SIH 2026):
-* [SpillTheory 4D Digital Twin Logic Specification (PDF)](docs/SpillTheory_4D_Digital_Twin_Logic_Specification.pdf)
-* [SpillTheory 8-Minute Grand Finale Presentation Script (PDF)](docs/SpillTheory_Presentation_Script_SIH2026.pdf)
+1. **Independent Workflows**: SAR and EO operate independently; multi-sensor fusion is not implemented in the current scope.
+2. **EO Cloud Cover**: Optical EO analysis is obstructed by thick cloud cover and is limited to daylight acquisitions, whereas SAR operates all-weather day and night.
+3. **Band Ordering Sensitivity**: The EO model expects exact Sentinel-2 L2R spectral reflectance ordering. Misordered bands will produce degraded segmentation results.
+4. **AIS Simulation**: AIS vessel trajectories are currently mathematically synthesized from scenario anchor points rather than connected to a real-time live satellite AIS commercial stream.
+5. **Tile Size**: EO input is resampled to $240 \times 240$ spatial resolution per the MADOS benchmark architecture.
 
 ---
 
-## ⚖️ License & Attribution
+## 📜 Documentation
 
-Developed under the **MIT License**. Built for maritime environmental protection, national coastline defense, and automated legal polluter attribution.
+- [System Architecture](docs/architecture.md)
+- [SAR Pipeline Specification](docs/sar.md)
+- [EO Pipeline Specification](docs/eo.md)
+- [4D Digital Twin Logic Specification (PDF)](docs/SpillTheory_4D_Digital_Twin_Logic_Specification.pdf)
+- [SIH 2026 Presentation Script (PDF)](docs/SpillTheory_Presentation_Script_SIH2026.pdf)
+
+---
+
+## ⚖️ License
+
+Developed under the **MIT License**. Built for marine environmental defense, coast guard tactical decision-support, and automated polluter attribution.

@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node dependencies
+# Node dependencies & builds
 node_modules/
 dist/
 dist-ssr/
@@ -16,7 +16,7 @@ dist-ssr/
 # Python
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 *.so
 .Python
 env/
@@ -43,6 +43,7 @@ wheels/
 .coverage
 htmlcov/
 .cache
+.ipynb_checkpoints/
 
 # Environment Variables
 .env
@@ -54,6 +55,10 @@ backend/_temp_*
 demo_data/_mask_*
 demo_data/_sar_*
 demo_data/_latest_*
+
+# Generated inference outputs
+data/outputs/*
+!data/outputs/README.md
 
 # OS Generated
 .DS_Store
@@ -67,14 +72,16 @@ ehthumbs.db
 *.swo
 *.zip
 
-# Model weights (do not commit large .pt/.pth files)
+# Large model weights (do not commit large .pt/.pth files)
 *.pt
 *.pth
+models/eo/*.pt
+models/eo/*.pth
 
 # EO temp inference files
 backend/_temp_eo_*.tiff
 demo_data/_eo_pred_*.png
 demo_data/_eo_conf_*.png
 
-# EO training context and extraction artifacts
+# Legacy EO context directory
 EO_Context/

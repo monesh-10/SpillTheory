@@ -32,17 +32,23 @@ from .preprocessing import preprocess_eo_tiff, validate_eo_file, EOValidationErr
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_CHECKPOINT = _REPO_ROOT / "EO_Context" / "best_v3_miou.pt"
+_DEFAULT_CHECKPOINT = _REPO_ROOT / "models" / "eo" / "best_v3_miou.pt"
 
 
 def _resolve_model_path() -> Path:
-    """Resolve EO model path: env var takes priority, models/ dir, then EO_Context/ fallback."""
+    """Resolve EO model path: env var takes priority, models/eo/, models/, then EO_Context/ fallback."""
     env_path = os.environ.get("EO_MODEL_PATH", "").strip()
     if env_path:
         return Path(env_path)
+    eo_ckpt = _REPO_ROOT / "models" / "eo" / "best_v3_miou.pt"
+    if eo_ckpt.exists():
+        return eo_ckpt
     models_ckpt = _REPO_ROOT / "models" / "best_v3_miou.pt"
     if models_ckpt.exists():
         return models_ckpt
+    legacy_ckpt = _REPO_ROOT / "EO_Context" / "best_v3_miou.pt"
+    if legacy_ckpt.exists():
+        return legacy_ckpt
     return _DEFAULT_CHECKPOINT
 
 

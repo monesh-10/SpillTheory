@@ -31,8 +31,9 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEMO_DATA_DIR = _REPO_ROOT / "demo_data"
+_OUTPUTS_DIR = _REPO_ROOT / "data" / "outputs"
 _BACKEND_DIR = _REPO_ROOT / "backend"
+_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("/api/detect-eo")
@@ -91,14 +92,14 @@ async def detect_eo(file: UploadFile = File(...)):
         pred_filename = f"_eo_pred_{ts}.png"
         conf_filename = f"_eo_conf_{ts}.png"
 
-        pred_path = _DEMO_DATA_DIR / pred_filename
-        conf_path = _DEMO_DATA_DIR / conf_filename
+        pred_path = _OUTPUTS_DIR / pred_filename
+        conf_path = _OUTPUTS_DIR / conf_filename
 
         save_prediction_png(result["prediction_map"], pred_path)
         save_confidence_png(result["confidence_map"], conf_path)
 
-        prediction_url = f"http://localhost:8000/demo_data/{pred_filename}"
-        confidence_url = f"http://localhost:8000/demo_data/{conf_filename}"
+        prediction_url = f"http://localhost:8000/data/outputs/{pred_filename}"
+        confidence_url = f"http://localhost:8000/data/outputs/{conf_filename}"
 
         # ------------------------------------------------------------------
         # 5. Build response

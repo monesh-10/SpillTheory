@@ -1,0 +1,144 @@
+{
+  "experiment": "MADOS-SIH V3 SeaRel-SR-UNet",
+  "new_inductive_bias": "Local Spectral Contrast Coordinates relative to multi-scale annular marine context",
+  "dataset_name": "mados-sih",
+  "data_root": "/kaggle/input/datasets/rickastley223/mados-sih/MADOS",
+  "device": "cuda",
+  "seed": 42,
+  "references": {
+    "v1_validation_miou": 0.6654805993661285,
+    "v1_validation_mf1": 0.7621197336663802,
+    "v2_1_validation_miou": 0.6784029603004456,
+    "v2_1_validation_mf1": 0.7744200229644775,
+    "v1_test_miou": 0.6644521951675415,
+    "v1_test_mf1": 0.7662789821624756
+  },
+  "num_train": 1433,
+  "num_val": 642,
+  "num_test": 728,
+  "model": "SeaRel-SR-UNet",
+  "absolute_branch": {
+    "type": "V2.1 residual spectral mixing + SE",
+    "spectral_hidden": 32,
+    "residual_scale_init": 0.1
+  },
+  "sea_relative_branch": {
+    "representation": "delta + log-ratio + spectral-angle",
+    "ring_pairs": [
+      [
+        3,
+        9
+      ],
+      [
+        7,
+        21
+      ],
+      [
+        15,
+        41
+      ]
+    ],
+    "hidden": 48,
+    "eps": 0.0001,
+    "delta_clip": 4.0,
+    "log_ratio_clip": 4.0,
+    "gate_init": 0.05,
+    "gate_max": 0.5
+  },
+  "spatial_backbone": "V1 residual GroupNorm U-Net",
+  "model_width": 48,
+  "dropout": 0.1,
+  "image_size": 240,
+  "in_channels": 11,
+  "num_classes": 15,
+  "resampling": "nearest",
+  "rare_class_sampler": true,
+  "confidence_weighting": true,
+  "ce_weight": 0.6,
+  "dice_weight": 0.4,
+  "best_val": {
+    "miou": 0.6826989650726318,
+    "mf1": 0.771173894405365,
+    "mprecision": 0.7594207525253296,
+    "mrecall": 0.817359209060669,
+    "delta_miou_vs_v1": 0.01721836570650337,
+    "delta_miou_vs_v2_1": 0.004296004772186279,
+    "delta_mf1_vs_v2_1": -0.003246128559112549
+  },
+  "learned": {
+    "absolute_spectral_scale": 0.2605805993080139,
+    "mean_lscc_gate": 0.05693359673023224,
+    "lscc_gate_per_band": [
+      0.053489066660404205,
+      0.06362291425466537,
+      0.058045003563165665,
+      0.05897863581776619,
+      0.05414130538702011,
+      0.056011758744716644,
+      0.05811014771461487,
+      0.05491993948817253,
+      0.055838167667388916,
+      0.05670461058616638,
+      0.05640806257724762
+    ],
+    "ring_weights_per_band": [
+      [
+        0.3057831823825836,
+        0.3322816789150238,
+        0.3619350790977478
+      ],
+      [
+        0.33567237854003906,
+        0.30681654810905457,
+        0.35751113295555115
+      ],
+      [
+        0.32821109890937805,
+        0.3209110200405121,
+        0.35087788105010986
+      ],
+      [
+        0.3298081159591675,
+        0.3247660994529724,
+        0.3454257547855377
+      ],
+      [
+        0.366807758808136,
+        0.3253673315048218,
+        0.30782487988471985
+      ],
+      [
+        0.33146169781684875,
+        0.3552497923374176,
+        0.31328848004341125
+      ],
+      [
+        0.3424904942512512,
+        0.35116079449653625,
+        0.3063487112522125
+      ],
+      [
+        0.3514629006385803,
+        0.315157026052475,
+        0.3333801329135895
+      ],
+      [
+        0.35072246193885803,
+        0.3317176401615143,
+        0.3175599277019501
+      ],
+      [
+        0.3230089247226715,
+        0.3134949505329132,
+        0.36349615454673767
+      ],
+      [
+        0.3271990716457367,
+        0.32938826084136963,
+        0.34341269731521606
+      ]
+    ]
+  },
+  "final_test_enabled": false,
+  "test": null
+}

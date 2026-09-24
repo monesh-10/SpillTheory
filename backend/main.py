@@ -48,9 +48,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DEMO_JSON = ROOT / "demo_data" / "demo_scenario.json"
 MODELS_DIR = ROOT / "models"
 DEMO_DATA_DIR = ROOT / "demo_data"
+DATA_OUTPUTS_DIR = ROOT / "data" / "outputs"
+DATA_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Mount demo_data to serve raw SAR images and masks directly to frontend
+# Mount static asset directories
 app.mount("/demo_data", StaticFiles(directory=str(DEMO_DATA_DIR)), name="demo_data")
+app.mount("/data/outputs", StaticFiles(directory=str(DATA_OUTPUTS_DIR)), name="data_outputs")
 
 # Global lazy-loaded model cache
 _sar_model = None
