@@ -156,7 +156,7 @@ async def detect_eo(
         if oil_spill_detected:
             spill_info = extract_spill_info(oil_mask)
             topology = spill_info.get("topology", {})
-            num_sources = 1
+            num_sources = topology.get("num_sources", 1)
             source_peaks = topology.get("source_peaks", [])
             coverage_pct = float(spill_info.get("coverage_percent", float(np.mean(oil_mask) * 100.0)))
 
@@ -193,10 +193,10 @@ async def detect_eo(
                 origin_lat=origin_lat,
                 origin_lon=origin_lon,
                 detection_timestamp="2026-09-07T04:32:00Z",
-                is_dual=False,
+                is_dual=(num_sources == 2),
             )
             loc_str = scenario_payload["spill_event"]["location_name"]
-            topology_type = "SINGLE_POINT_SOURCE"
+            topology_type = topology.get("topology", "SINGLE_POINT_SOURCE")
 
         # ------------------------------------------------------------------
         # 8. Build complete response
@@ -216,11 +216,11 @@ async def detect_eo(
             "num_sources": num_sources,
             "topology": topology_type,
             "classification": (
-                "Single Point-Source Petroleum Slick (1 Ship)"
+                topology.get("classification", "Single Point-Source Petroleum Slick")
                 if oil_spill_detected else "Undisturbed sea clutter"
             ),
             "vessel_source_classification": (
-                "Single Ship Leak (1 Vessel)"
+                f"{num_sources} Vessel Leak" if num_sources > 1 else "Single Ship Leak (1 Vessel)"
                 if oil_spill_detected else "Clean Ocean (0 Vessels · Zero Spill)"
             ),
             "geospatial": geo_meta,
