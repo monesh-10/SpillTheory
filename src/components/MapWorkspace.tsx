@@ -221,7 +221,8 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
   const baseTileLayerRef = useRef<L.TileLayer | null>(null);
   const refTileLayerRef = useRef<L.TileLayer | null>(null);
   const [layersMenuOpen, setLayersMenuOpen] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(true);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [lagrangianOpen, setLagrangianOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
 
   const origin1Coords: [number, number] = hindcast?.originCoordinates || [18.065, 72.395];
@@ -430,7 +431,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       }).bindTooltip(`
         <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #94A3B8; background: rgba(7, 12, 24, 0.96); padding: 6px 10px; border-radius: 6px; border: 1px dashed #64748B;">
           <strong style="color: #94A3B8;">PROJECTED RELEASE FOOTPRINT (ORIGIN #1)</strong><br/>
-          Pending MT Ocean Star arrival at 02:47 UTC · Sea is clean
+          Pending ${vessels[0]?.name || 'Target Vessel 1'} arrival at 02:47 UTC · Sea is clean
         </div>
       `, { sticky: true }).addTo(group);
 
@@ -445,7 +446,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         }).bindTooltip(`
           <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #C084FC; background: rgba(7, 12, 24, 0.96); padding: 6px 10px; border-radius: 6px; border: 1px dashed #818CF8;">
             <strong style="color: #C084FC;">PROJECTED RELEASE FOOTPRINT (ORIGIN #2)</strong><br/>
-            Pending Gulf Voyager arrival at 02:35 UTC
+            Pending ${vessels[1]?.name || 'Target Vessel 2'} arrival at 02:35 UTC
           </div>
         `, { sticky: true }).addTo(group);
       }
@@ -725,7 +726,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       trajectoryLine1.bindTooltip(`
         <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: #FFFFE3; background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); padding: 5px 9px; border: 1.5px solid #3B82F6; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.6);">
           <strong style="color: #60A5FA; font-family: monospace;">HINDCAST — PROBABLE SOURCE PATH (Analytical Reverse Reconstruction)</strong><br/>
-          Reverse Lagrangian Advection (MT Ocean Star) · ${hindcast.confidencePercent}% Conf
+          Reverse Lagrangian Advection (${vessels[0]?.name || 'Target Vessel 1'}) · ${hindcast.confidencePercent}% Conf
         </div>
       `, { sticky: true });
 
@@ -914,7 +915,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
                 </span>
                 <span style="color: #475569; font-size: 9px;">|</span>
                 <span style="font-size: 10.5px; font-weight: 600; color: #F8FAFC; font-family: 'JetBrains Mono', monospace;">
-                  ${isReleaseMoment ? 'MT Ocean Star (Discharge Overboard)' : (isPreSpill ? '02:47 UTC · Clean Sea' : '02:47 UTC · MT Ocean Star')}
+                  ${isReleaseMoment ? `${vessels[0]?.name || 'Target Vessel 1'} (Discharge Overboard)` : (isPreSpill ? '02:47 UTC · Clean Sea' : `02:47 UTC · ${vessels[0]?.name || 'Target Vessel 1'}`)}
                 </span>
               </div>
             </div>
@@ -959,7 +960,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
                   </span>
                   <span style="color: #475569; font-size: 9px;">|</span>
                   <span style="font-size: 10.5px; font-weight: 600; color: #F8FAFC; font-family: 'JetBrains Mono', monospace;">
-                    ${isReleaseMoment ? 'Gulf Voyager (Discharge Overboard)' : (isPreSpill ? '02:35 UTC · Clean Sea' : '02:35 UTC · Gulf Voyager')}
+                    ${isReleaseMoment ? `${vessels[1]?.name || 'Target Vessel 2'} (Discharge Overboard)` : (isPreSpill ? '02:35 UTC · Clean Sea' : `02:35 UTC · ${vessels[1]?.name || 'Target Vessel 2'}`)}
                   </span>
                 </div>
               </div>
@@ -1128,7 +1129,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
               html: `
                 <div style="background: rgba(7, 15, 29, 0.92); backdrop-filter: blur(6px); border: 1.2px solid #00E5FF; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #00E5FF; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none;">
                   <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #00E5FF;"></span>
-                  <span>TRAJECTORY #1 · MT OCEAN STAR (125° SE)</span>
+                  <span>TRAJECTORY #1 · ${vessels[0]?.name?.toUpperCase() || 'SUSPECT #1'}</span>
                 </div>
               `,
               iconSize: [220, 20],
@@ -1142,7 +1143,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
               html: `
                 <div style="background: rgba(7, 15, 29, 0.92); backdrop-filter: blur(6px); border: 1.2px solid #C084FC; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #C084FC; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none;">
                   <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #C084FC;"></span>
-                  <span>TRAJECTORY #2 · GULF VOYAGER (310° NW)</span>
+                  <span>TRAJECTORY #2 · ${vessels[1]?.name?.toUpperCase() || 'SUSPECT #2'}</span>
                 </div>
               `,
               iconSize: [220, 20],
@@ -1185,7 +1186,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
               ${(isSuspect1 || isSuspect2) ? `
                 <div style="position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); pointer-events: none; z-index: 40; white-space: nowrap;">
                   <div style="background: rgba(7, 15, 29, 0.95); backdrop-filter: blur(8px); border: 1.2px solid ${isSuspect1 ? '#EF4444' : '#C084FC'}; border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 800; color: ${isSuspect1 ? '#EF4444' : '#C084FC'};">
-                    ${isSuspect1 ? '#1 · MT OCEAN STAR' : '#2 · GULF VOYAGER'}
+                    ${isSuspect1 ? `#1 · ${vessels[0]?.name?.toUpperCase() || 'SUSPECT #1'}` : `#2 · ${vessels[1]?.name?.toUpperCase() || 'SUSPECT #2'}`}
                   </div>
                 </div>
               ` : ''}
@@ -1427,9 +1428,9 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         </button>
       </div>
 
-      {/* Floating Active/Selected Vessel Tactical HUD Card (matching reference screenshot) */}
-      {(() => {
-        const displayVessel = selectedVessel || vessels.find(v => v.rank === 1) || vessels[0];
+      {/* Floating Active/Selected Vessel Tactical HUD Card (only when a vessel is selected) */}
+      {selectedVessel && (() => {
+        const displayVessel = selectedVessel;
         if (!displayVessel) return null;
         const isFlagged = displayVessel.rank === 1;
 
@@ -1519,9 +1520,18 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
                 TEMPORAL CAUSALITY ENGINE (4D)
               </span>
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/50 font-bold">
-              100% CAUSAL PASS
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-500/50 font-bold">
+                100% CAUSAL PASS
+              </span>
+              <button
+                onClick={() => onToggleLayer('temporalValidation')}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#0E1B2C] cursor-pointer transition-colors"
+                title="Close"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
           
           <div className="space-y-1.5 pt-2 text-[10.5px] font-mono">
@@ -1587,11 +1597,11 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
             <div className="space-y-1.5 text-[11px]">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-2 rounded-sm bg-[#EF4444]/20 border border-[#EF4444]" />
-                <span className="text-[#F87171] font-semibold">Plume #1 (MT Ocean Star)</span>
+                <span className="text-[#F87171] font-semibold">Plume #1 ({vessels[0]?.name || 'Target Vessel 1'})</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-2 rounded-sm bg-[#C084FC]/25 border border-[#C084FC]" />
-                <span className="text-[#C084FC] font-semibold">Plume #2 (Gulf Voyager)</span>
+                <span className="text-[#C084FC] font-semibold">Plume #2 ({vessels[1]?.name || 'Target Vessel 2'})</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full border border-[#F59E0B] flex items-center justify-center">
@@ -1669,55 +1679,75 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
       {/* Tactical Interactive Lagrangian Particle Tracking Engine HUD Badge */}
       <div className="absolute bottom-4 right-4 z-20 font-sans pointer-events-auto">
-        <div className="bg-[#070F1D]/95 border border-cyan-400/50 rounded-xl p-3 text-xs shadow-2xl backdrop-blur-md animate-in fade-in max-w-xs">
-          <div className="flex items-center justify-between border-b border-[#162D4A] pb-1.5 gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 font-mono">
-                LAGRANGIAN ENGINE
-              </span>
+        {lagrangianOpen ? (
+          <div className="bg-[#070F1D]/95 border border-cyan-400/50 rounded-xl p-3 text-xs shadow-2xl backdrop-blur-md animate-in fade-in max-w-xs">
+            <div className="flex items-center justify-between border-b border-[#162D4A] pb-1.5 gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 font-mono">
+                  LAGRANGIAN ENGINE
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-500/40 font-bold">
+                  {currentTimeSimulationMinutes < -300
+                    ? 'PRE-SPILL'
+                    : (currentTimeSimulationMinutes < 0
+                      ? 'BACKTRACK'
+                      : (currentTimeSimulationMinutes === 0
+                        ? 'SAR OBSERVED'
+                        : 'FORECAST'))}
+                </span>
+                <button
+                  onClick={() => setLagrangianOpen(false)}
+                  className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer transition-colors"
+                  title="Hide"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-            <span className="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-500/40 font-bold">
-              {currentTimeSimulationMinutes < -300
-                ? 'PRE-SPILL READY'
-                : (currentTimeSimulationMinutes < 0
-                  ? 'BACKTRACKING (150)'
-                  : (currentTimeSimulationMinutes === 0
-                    ? 'SAR OBSERVED (150)'
-                    : 'FORWARD DISPERSION (150)'))}
-            </span>
-          </div>
 
-          <div className="space-y-1 pt-1.5 text-[10.5px] font-mono">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Particle Swarm:</span>
-              <span className="text-emerald-400 font-bold">
-                {currentTimeSimulationMinutes < -300
-                  ? '60 Hydro Tracers'
-                  : (isDualSpillScenario ? '240 Active Parcels' : '150 Active Parcels')}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Advection Vector:</span>
-              <span className="text-cyan-400 font-bold">0.81 kn (058° ENE)</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400">Fay Growth Model:</span>
-              <span className="text-amber-400 font-bold">Viscous-Surface Tension</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-[#162D4A] pt-1 mt-1">
-              <span className="text-slate-300 font-semibold">Current Footprint:</span>
-              <span className="text-emerald-300 font-extrabold text-[11px]">
-                {currentTimeSimulationMinutes < -300
-                  ? '0.0 km² (Clean Sea)'
-                  : `${(currentTimeSimulationMinutes < 0 ? Math.max(1.8, incident.slickAreaKm2 * Math.pow(hudSlickScale, 1.25)) : incident.slickAreaKm2 * Math.pow(hudSlickScale, 1.35)).toFixed(1)} km²`}
-              </span>
+            <div className="space-y-1 pt-1.5 text-[10.5px] font-mono">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Particle Swarm:</span>
+                <span className="text-emerald-400 font-bold">
+                  {currentTimeSimulationMinutes < -300
+                    ? '60 Hydro Tracers'
+                    : (isDualSpillScenario ? '240 Active Parcels' : '150 Active Parcels')}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Advection Vector:</span>
+                <span className="text-cyan-400 font-bold">0.81 kn (058° ENE)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">Fay Growth Model:</span>
+                <span className="text-amber-400 font-bold">Viscous-Surface Tension</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-[#162D4A] pt-1 mt-1">
+                <span className="text-slate-300 font-semibold">Current Footprint:</span>
+                <span className="text-emerald-300 font-extrabold text-[11px]">
+                  {currentTimeSimulationMinutes < -300
+                    ? '0.0 km² (Clean Sea)'
+                    : `${(currentTimeSimulationMinutes < 0 ? Math.max(1.8, incident.slickAreaKm2 * Math.pow(hudSlickScale, 1.25)) : incident.slickAreaKm2 * Math.pow(hudSlickScale, 1.35)).toFixed(1)} km²`}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <button
+            onClick={() => setLagrangianOpen(true)}
+            className="px-3 py-1.5 rounded-md bg-[#070F1D]/95 border border-[#162D4A] hover:border-[#00E5FF]/40 text-xs text-cyan-300 shadow-xl transition-colors flex items-center gap-1.5 cursor-pointer font-mono"
+            title="View Lagrangian Hydro Engine Telemetry"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider">Hydro Engine</span>
+          </button>
+        )}
       </div>
 
       {/* "How to Read This Map" First-Time Modal Overlay */}

@@ -113,40 +113,10 @@ export const apiService = {
     return found || (id === 'OCN-043' || id.includes('043') ? SINGLE_SPILL_INCIDENT : PRIMARY_INCIDENT);
   },
 
+
   async getScenarioBundle(spillId: string = 'OCN-042'): Promise<ScenarioBundle> {
-    // Single Spill point-source scenario (1 suspect vessel: MT OCEAN STAR)
-    if (spillId === 'OCN-043' || spillId.includes('043') || spillId.toLowerCase().includes('single')) {
-      return {
-        incident: SINGLE_SPILL_INCIDENT,
-        vessels: [SUSPECT_VESSELS[0]], // Only MT OCEAN STAR (91.7% Priority)
-        hindcast: {
-          ...PRIMARY_HINDCAST,
-          incidentId: 'OCN-043',
-          confidencePercent: 91.7
-        },
-        forecastSteps: FORECAST_STEPS.map(s => ({
-          ...s,
-          estimatedAreaKm2: Number((s.estimatedAreaKm2 * (8.25 / 13.48)).toFixed(2))
-        })),
-        metocean: PRIMARY_METOCEAN,
-        shorelineRisk: PRIMARY_SHORELINE_RISK
-      };
-    }
-
-    // Dual Spill coalesced scenario (2 suspect vessels merging)
-    if (spillId === 'OCN-042' || spillId === 'PRIMARY_INCIDENT' || spillId === 'SPILL_001') {
-      return {
-        incident: PRIMARY_INCIDENT,
-        vessels: SUSPECT_VESSELS,
-        hindcast: PRIMARY_HINDCAST,
-        forecastSteps: FORECAST_STEPS,
-        metocean: PRIMARY_METOCEAN,
-        shorelineRisk: PRIMARY_SHORELINE_RISK
-      };
-    }
-
     try {
-      const res = await fetch(`${BACKEND_URL}/api/scenario/${spillId}`, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(`${BACKEND_URL}/api/scenario/${spillId}`, { signal: AbortSignal.timeout(3500) });
       if (res.ok) {
         const raw = await res.json();
         const cLat = Number(raw.spill_event?.centroid?.lat || 18.12);
@@ -157,25 +127,25 @@ export const apiService = {
         const incident: Incident = {
           id: raw.spill_event?.spill_id || spillId,
           code: raw.spill_event?.spill_id || spillId,
-          name: spillId === 'SPILL_002'
+          name: raw.spill_event?.location_name || (spillId === 'SPILL_002'
             ? 'Chennai Port Cargo Bunker Leak'
             : spillId === 'SPILL_003'
             ? 'Kochi Malabar Coast Seep'
-            : 'Offshore Mumbai Basin Discharge',
+            : (spillId === 'OCN-043' || spillId.includes('043') ? 'Offshore Mumbai Basin (Single Point-Source)' : 'Offshore Mumbai Basin (Dual Coalesced)')),
           locationName: raw.spill_event?.location_name || (spillId === 'SPILL_002' ? 'Coromandel Coast, Chennai' : spillId === 'SPILL_003' ? 'Malabar Coast, Kochi' : 'Offshore Mumbai Basin, Arabian Sea'),
           coordinates: [cLat, cLon],
           detectedAt: raw.spill_event?.timestamp || '2026-09-07T04:32:00Z',
           estimatedAgeHours: `${raw.spill_event?.estimated_age_hours || 5.5} hours`,
-          slickAreaKm2: Number(raw.spill_event?.area_km2 || 13.48),
+          slickAreaKm2: Number(raw.spill_event?.area_km2 || (spillId === 'OCN-043' ? 8.25 : 13.48)),
           slickPerimeterKm: Math.round(Math.sqrt(Number(raw.spill_event?.area_km2 || 13.48)) * 8.5 * 10) / 10,
           confidencePercent: Math.round((raw.spill_event?.confidence || 0.947) * 100),
-          classification: 'Probable petroleum slick',
-          sensor: 'Sentinel-1 / ALOS-2 PALSAR SAR',
+          classification: raw.spill_event?.classification || 'Probable petroleum slick',
+          sensor: raw.sensor_metadata?.sensor || 'Sentinel-1 / ALOS PALSAR C/L-Band SAR',
           status: 'UNDER INVESTIGATION',
           priority: 'HIGH',
           backscatterDb: -9.2,
-          model: 'OceanTrace-Seg v1.4 (U-Net Multi-Res)',
-          summary: raw.sar_metadata?.reason || raw.attribution?.candidates?.[0]?.reasoning_agent_report || 'Active SAR backscatter depression identified in territorial waters.'
+          model: 'SpillTheory U-Net Deep Segmentation',
+          summary: raw.sensor_metadata?.reason || raw.sar_metadata?.reason || 'Active SAR backscatter depression identified in territorial waters.'
         };
 
         const origEstimate = raw.hindcast?.origin_estimate;
@@ -191,7 +161,7 @@ export const apiService = {
         const hindcast: HindcastResult = {
           incidentId: spillId,
           originCoordinates: [computedOrigLat, computedOrigLon],
-          originRegionName: spillId === 'SPILL_002' ? 'Chennai Anchorage Approach' : spillId === 'SPILL_003' ? 'Kochi Shipping Fairway' : 'Mumbai High Sector Beta',
+          originRegionName: raw.spill_event?.location_name ? `${raw.spill_event.location_name} (Origin)` : 'Probable Discharge Origin',
           confidencePercent: Math.round((origEstimate?.confidence || 0.85) * 100),
           dischargeWindowUtc: origEstimate?.time ? origEstimate.time.replace('2026-09-01T', '').replace('2026-09-07T', '').replace('Z', ' UTC') : '02:47 UTC',
           particleCount: origEstimate?.particle_count || realParticleCloud.length || 150,
@@ -203,33 +173,31 @@ export const apiService = {
 
         const rawTracks = raw.ais?.vessel_tracks || [];
         const vessels: Vessel[] = rawTracks.length > 0 ? rawTracks.map((track: any, idx: number) => {
-          const cand = (raw.attribution?.candidates || []).find((c: any) => c.mmsi === track.mmsi || c.name === track.name);
-          const isV1 = idx === 0 || track.name === 'MT OCEAN STAR';
-          const isV2 = idx === 1 || track.name === 'GULF VOYAGER';
-          const defaultScore = isV1 ? 92 : (isV2 ? 76 : 30);
+          const cand = (raw.attribution?.candidates || []).find((c: any) => String(c.mmsi) === String(track.mmsi) || c.name === track.name);
+          const defaultScore = idx === 0 ? 92 : (idx === 1 ? 76 : 30);
           const score = cand ? Math.round(cand.score * 100) : defaultScore;
           
           let waypoints = (track.path || []).map((pt: any) => ({
             lat: pt.lat,
             lng: pt.lon,
             timestampUtc: pt.timestamp ? pt.timestamp.replace('2026-09-01T', '').replace('2026-09-07T', '').replace('Z', ' UTC') : '02:47 UTC',
-            speedKt: pt.sog || (isV1 ? 11.4 : (isV2 ? 10.8 : 12.0)),
-            headingDeg: pt.heading || (isV1 ? 125 : (isV2 ? 310 : 90))
+            speedKt: pt.sog || 11.4,
+            headingDeg: pt.heading || 125
           }));
 
           const lastPt = waypoints[waypoints.length - 1] || { lat: cLat, lng: cLon, speedKt: 11.4, headingDeg: 125 };
 
           return {
             id: `VSL-${track.mmsi || idx + 1}`,
-            name: track.name || (isV1 ? 'MT OCEAN STAR' : (isV2 ? 'GULF VOYAGER' : `Vessel ${idx + 1}`)),
-            imo: isV1 ? '9384910' : (isV2 ? '9412089' : `9${String(track.mmsi || 1234567).padStart(6, '0').slice(0, 6)}`),
-            mmsi: String(track.mmsi || (isV1 ? '419001284' : (isV2 ? '419002931' : '412345678'))),
-            callsign: isV1 ? 'ATX9' : (isV2 ? 'VTG4' : `9V${idx + 1}A`),
-            flag: isV1 ? 'Liberia' : (isV2 ? 'Marshall Islands' : 'Panama'),
-            flagCode: isV1 ? 'LR' : (isV2 ? 'MH' : 'PA'),
-            type: track.type || (isV1 ? 'Crude Oil Tanker' : (isV2 ? 'Chemical/Oil Products Tanker' : 'Bulk Carrier')),
-            lengthM: isV1 ? 248 : (isV2 ? 182 : 225),
-            beamM: isV1 ? 42 : (isV2 ? 28 : 32),
+            name: track.name || `Vessel ${idx + 1}`,
+            imo: String(track.imo || `9${String(track.mmsi || 1234567).padStart(6, '0').slice(0, 6)}`),
+            mmsi: String(track.mmsi || '419001284'),
+            callsign: track.callsign || `9V${idx + 1}A`,
+            flag: track.flag || 'International',
+            flagCode: (track.flag || '').slice(0, 2).toUpperCase() || 'LR',
+            type: track.type || 'Crude Oil Tanker',
+            lengthM: track.lengthM || 225,
+            beamM: track.beamM || 32,
             currentCoordinates: [lastPt.lat, lastPt.lng] as [number, number],
             currentSpeedKt: lastPt.speedKt,
             currentHeadingDeg: lastPt.headingDeg,
@@ -238,26 +206,24 @@ export const apiService = {
             rank: idx + 1,
             investigationPriority: score >= 80 ? 'HIGH' : score >= 50 ? 'MEDIUM' : 'LOW',
             attributionScore: score,
-            proximityScore: cand?.evidence?.proximity_score ? Math.round(cand.evidence.proximity_score * 100) : (isV1 ? 96 : 84),
-            trajectoryScore: cand?.evidence?.trajectory_score ? Math.round(cand.evidence.trajectory_score * 100) : (isV1 ? 94 : 78),
-            temporalScore: isV1 ? 91 : 79,
-            aisAnomalyScore: cand?.evidence?.anomaly_score ? Math.round(cand.evidence.anomaly_score * 100) : (isV1 ? 87 : 72),
-            behavioralAnomalyScore: isV1 ? 82 : 68,
+            proximityScore: cand?.evidence?.proximity_score ? Math.round(cand.evidence.proximity_score * 100) : 92,
+            trajectoryScore: cand?.evidence?.trajectory_score ? Math.round(cand.evidence.trajectory_score * 100) : 85,
+            temporalScore: cand?.evidence?.temporal_score ? Math.round(cand.evidence.temporal_score * 100) : 88,
+            aisAnomalyScore: cand?.evidence?.anomaly_score ? Math.round(cand.evidence.anomaly_score * 100) : 80,
+            behavioralAnomalyScore: score > 70 ? 82 : 45,
             speedAnomalyDetected: score > 70,
             courseDeviationDetected: score > 70,
             presenceInOriginWindow: true,
             track: waypoints,
             activityTimeline: [
               {
-                timestampUtc: isV1 ? '02:47 UTC' : '02:35 UTC',
-                description: isV1
-                  ? 'Direct transit through probabilistic hindcast origin centroid at 02:47 UTC'
-                  : 'Passed through origin centroid #2 during estimated release window at 02:35 UTC',
-                isAnomaly: true,
+                timestampUtc: '02:47 UTC',
+                description: `Track waypoint transit near probabilistic origin centroid (${computedOrigLat}°N, ${computedOrigLon}°E)`,
+                isAnomaly: idx === 0,
                 type: 'ORIGIN_PROXIMITY'
               }
             ],
-            destination: isV1 ? 'JNPT MUMBAI' : 'FUJAIRAH',
+            destination: track.destination || 'Commercial Terminal',
             eta: '07 Sep 2026 18:00 UTC'
           };
         }) : SUSPECT_VESSELS;
@@ -437,6 +403,128 @@ export const apiService = {
 
   async getVessel(id: string): Promise<Vessel | undefined> {
     return SUSPECT_VESSELS.find(v => v.id === id);
+  },
+
+  async getAISVessels(
+    lat: number,
+    lon: number,
+    radiusKm: number = 50.0,
+    originLat?: number,
+    originLon?: number,
+    preferLive: boolean = false
+  ): Promise<{
+    source: string;
+    sector: string;
+    vessels: Vessel[];
+    attributionRanking?: any[];
+  }> {
+    try {
+      const url = new URL(`${BACKEND_URL}/api/ais/vessels`);
+      url.searchParams.set('lat', String(lat));
+      url.searchParams.set('lon', String(lon));
+      url.searchParams.set('radius_km', String(radiusKm));
+      if (originLat !== undefined && !isNaN(originLat)) {
+        url.searchParams.set('origin_lat', String(originLat));
+      }
+      if (originLon !== undefined && !isNaN(originLon)) {
+        url.searchParams.set('origin_lon', String(originLon));
+      }
+      if (preferLive) {
+        url.searchParams.set('prefer_live', 'true');
+      }
+
+      const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) });
+      if (res.ok) {
+        const data = await res.json();
+        const rawTracks = data.vessels || [];
+        const candList = data.attribution_ranking || [];
+        const oLat = originLat !== undefined ? originLat : Number((lat - 0.047).toFixed(4));
+        const oLon = originLon !== undefined ? originLon : Number((lon - 0.069).toFixed(4));
+
+        const vessels: Vessel[] = rawTracks.map((track: any, idx: number) => {
+          const cand = candList.find((c: any) => String(c.mmsi) === String(track.mmsi) || c.name === track.name);
+          const defaultScore = idx === 0 ? 88 : (idx === 1 ? 65 : 28);
+          const score = cand ? Math.round(cand.score * 100) : defaultScore;
+
+          const waypoints = (track.path || []).map((pt: any) => ({
+            lat: pt.lat,
+            lng: pt.lon,
+            timestampUtc: pt.timestamp ? pt.timestamp.replace('2026-09-01T', '').replace('2026-09-07T', '').replace('Z', ' UTC') : '02:47 UTC',
+            speedKt: pt.sog || 11.4,
+            headingDeg: pt.heading || 125
+          }));
+
+          const lastPt = waypoints[waypoints.length - 1] || { lat, lng: lon, speedKt: 11.4, headingDeg: 125 };
+          const distKm = cand?.evidence?.proximity_km !== undefined 
+            ? Number(cand.evidence.proximity_km.toFixed(1))
+            : Number((Math.hypot(lastPt.lat - oLat, lastPt.lng - oLon) * 111).toFixed(1));
+
+          const speedDrop = cand?.evidence?.speed_drop_kts || 0;
+          const courseDev = cand?.evidence?.course_delta_deg || 0;
+
+          return {
+            id: `VSL-${track.mmsi || idx + 1}`,
+            name: track.name || `Vessel ${idx + 1}`,
+            imo: String(track.imo || `9${String(track.mmsi || 1234567).padStart(6, '0').slice(0, 6)}`),
+            mmsi: String(track.mmsi || '419001284'),
+            callsign: track.callsign || `9V${idx + 1}A`,
+            flag: track.flag || 'International',
+            flagCode: (track.flag || '').slice(0, 2).toUpperCase() || 'LR',
+            type: track.type || 'Crude Oil Tanker',
+            lengthM: track.lengthM || 225,
+            beamM: track.beamM || 32,
+            currentCoordinates: [lastPt.lat, lastPt.lng] as [number, number],
+            currentSpeedKt: lastPt.speedKt,
+            currentHeadingDeg: lastPt.headingDeg,
+            distanceFromOriginKm: distKm,
+            timeDiffMinutes: Math.abs(idx * 5),
+            rank: idx + 1,
+            investigationPriority: score >= 75 ? 'HIGH' : score >= 50 ? 'MEDIUM' : score >= 25 ? 'LOW' : 'CLEARED',
+            attributionScore: score,
+            proximityScore: cand?.evidence?.proximity_score ? Math.round(cand.evidence.proximity_score * 100) : Math.max(10, 100 - Math.round(distKm * 5)),
+            trajectoryScore: cand?.evidence?.trajectory_score ? Math.round(cand.evidence.trajectory_score * 100) : (score > 60 ? 82 : 40),
+            temporalScore: cand?.evidence?.temporal_score ? Math.round(cand.evidence.temporal_score * 100) : (distKm < 15 ? 88 : 35),
+            aisAnomalyScore: cand?.evidence?.anomaly_score ? Math.round(cand.evidence.anomaly_score * 100) : (speedDrop > 0 ? 80 : 25),
+            behavioralAnomalyScore: score > 70 ? 85 : 30,
+            speedAnomalyDetected: speedDrop > 1.5,
+            courseDeviationDetected: courseDev > 10.0,
+            presenceInOriginWindow: distKm <= 15,
+            track: waypoints,
+            activityTimeline: [
+              {
+                timestampUtc: '02:47 UTC',
+                description: `Track waypoint transit near probabilistic origin centroid (${oLat.toFixed(4)}°N, ${oLon.toFixed(4)}°E)`,
+                isAnomaly: idx === 0,
+                type: 'ORIGIN_PROXIMITY'
+              },
+              ...(speedDrop > 1.5 ? [{
+                timestampUtc: '02:47 UTC',
+                description: `Kinematic speed drop detected (${speedDrop.toFixed(1)} kts decrease during transit)`,
+                isAnomaly: true,
+                type: 'SPEED_DROP' as const
+              }] : [])
+            ],
+            destination: track.destination || 'Commercial Terminal',
+            eta: '07 Sep 2026 18:00 UTC'
+          };
+        });
+
+        return {
+          source: data.source || 'MARINECADASTRE_AIS',
+          sector: data.sector || 'Maritime Corridor',
+          vessels,
+          attributionRanking: data.attribution_ranking
+        };
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      source: 'LOCAL_FALLBACK',
+      sector: 'Regional Sector',
+      vessels: SUSPECT_VESSELS
+    };
   },
 
   async getForecast(incidentId?: string): Promise<ForecastStep[]> {

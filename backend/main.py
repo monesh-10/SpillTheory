@@ -120,6 +120,31 @@ def get_metocean_endpoint(lat: float = 18.12, lon: float = 72.45):
     """
     return fetch_live_metocean(lat, lon)
 
+@app.get("/api/ais/vessels")
+def get_ais_vessels_endpoint(
+    lat: float = 18.112,
+    lon: float = 72.464,
+    radius_km: float = 50.0,
+    origin_lat: float = None,
+    origin_lon: float = None,
+    is_dual: bool = False,
+    prefer_live: bool = False
+):
+    """
+    Fetches real AIS vessel telemetry and attribution rankings matching the specified coordinates.
+    Connects to live terrestrial AIS (Digitraffic) or MarineCadastre-compliant corridor AIS.
+    """
+    from backend.ais_service import fetch_ais_vessels_for_coordinates
+    return fetch_ais_vessels_for_coordinates(
+        lat=lat,
+        lon=lon,
+        radius_km=radius_km,
+        origin_lat=origin_lat,
+        origin_lon=origin_lon,
+        is_dual=is_dual,
+        prefer_live=prefer_live
+    )
+
 @app.get("/api/scenario/{spill_id}")
 def get_scenario(spill_id: str):
     if spill_id in CUSTOM_SCENARIOS:
@@ -257,30 +282,21 @@ def get_scenario(spill_id: str):
         calc_orig_pt = data["hindcast"]["origin_estimate"]["point"]
         o_lat = calc_orig_pt["lat"]
         o_lon = calc_orig_pt["lon"]
-        for idx, v in enumerate(data.get("ais", {}).get("vessel_tracks", [])):
-            if idx == 0:
-                v["name"] = "MT OCEAN STAR"
-                v["type"] = "Crude Oil Tanker"
-                v["mmsi"] = 419001284
-                v["path"] = [
-                    {"timestamp": "2026-09-01T01:42:00Z", "lat": round(o_lat + 0.115, 5), "lon": round(o_lon - 0.115, 5), "heading": 125, "sog": 11.4},
-                    {"timestamp": "2026-09-01T02:18:00Z", "lat": round(o_lat + 0.057, 5), "lon": round(o_lon - 0.057, 5), "heading": 125, "sog": 11.4},
-                    {"timestamp": "2026-09-01T02:47:00Z", "lat": round(o_lat, 5), "lon": round(o_lon, 5), "heading": 125, "sog": 11.4},
-                    {"timestamp": "2026-09-01T03:30:00Z", "lat": round(o_lat - 0.085, 5), "lon": round(o_lon + 0.085, 5), "heading": 125, "sog": 11.4},
-                    {"timestamp": spill_time, "lat": round(o_lat - 0.170, 5), "lon": round(o_lon + 0.170, 5), "heading": 125, "sog": 11.4},
-                ]
-            elif idx == 1:
-                v["name"] = "GULF VOYAGER"
-                v["type"] = "Chemical/Oil Products Tanker"
-                v["mmsi"] = 419002931
-                o2_lat = round(o_lat - 0.015, 5)
-                o2_lon = round(o_lon + 0.020, 5)
-                v["path"] = [
-                    {"timestamp": "2026-09-01T01:40:00Z", "lat": round(o2_lat - 0.090, 5), "lon": round(o2_lon + 0.075, 5), "heading": 310, "sog": 10.8},
-                    {"timestamp": "2026-09-01T02:35:00Z", "lat": round(o2_lat, 5), "lon": round(o2_lon, 5), "heading": 310, "sog": 10.8},
-                    {"timestamp": "2026-09-01T03:20:00Z", "lat": round(o2_lat + 0.090, 5), "lon": round(o2_lon - 0.075, 5), "heading": 310, "sog": 10.8},
-                    {"timestamp": spill_time, "lat": round(o2_lat + 0.180, 5), "lon": round(o2_lon - 0.155, 5), "heading": 310, "sog": 10.8},
-                ]
+        is_dual_scen = (spill_id == "OCN-042" or "dual" in spill_id.lower() or ("single" not in spill_id.lower() and spill_id != "OCN-043"))
+
+        from backend.ais_service import fetch_ais_vessels_for_coordinates
+        ais_resolved = fetch_ais_vessels_for_coordinates(
+            lat=c_lat,
+            lon=c_lon,
+            origin_lat=o_lat,
+            origin_lon=o_lon,
+            is_dual=is_dual_scen,
+            detection_timestamp=spill_time
+        )
+        data["ais"] = {
+            "data_source": ais_resolved["data_source"],
+            "vessel_tracks": ais_resolved["vessels"]
+        }
 
         # -------------------------------------------------------------
         # Real Deterministic AIS Attribution Scoring

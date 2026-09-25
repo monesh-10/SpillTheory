@@ -70,6 +70,7 @@ def test_sar_single_vessel_detection():
     assert data.get("spill_detected") is True
     assert data.get("num_sources") >= 1
     assert "Ship" in data.get("classification", "") or "Dual" in data.get("classification", "") or "Single" in data.get("classification", "")
+    assert data.get("area_km2") > 0
 
 
 def test_sar_dual_vessel_detection():

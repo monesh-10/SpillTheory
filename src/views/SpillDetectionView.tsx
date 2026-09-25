@@ -856,8 +856,8 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                     {isCleanOcean && areaValue === 0
                       ? 'None (Clean Clutter)'
                       : isDual
-                      ? '2 Ships (Ocean Star + Gulf Voyager)'
-                      : '1 Ship (MT Ocean Star · 91.7%)'}
+                      ? '2 Ships (Dual Discharges Coalesced)'
+                      : '1 Ship (Point-Source Discharge)'}
                   </span>
                 </div>
 

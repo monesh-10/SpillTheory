@@ -246,6 +246,11 @@ export const App: React.FC = () => {
                 setCurrentPage('overview');
               }}
               onOpenWorkspace={() => setCurrentPage('overview')}
+              onUpdateVessels={(newVessels) => {
+                setVessels(newVessels);
+                if (newVessels.length > 0) setSelectedVessel(newVessels[0]);
+              }}
+              currentIncidentCoordinates={currentIncident.coordinates}
             />
           )}
 

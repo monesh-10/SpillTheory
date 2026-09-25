@@ -146,53 +146,28 @@ def build_and_register_spill_scenario(
     hindcast_timestamp2 = "2026-09-07T02:35:00Z"
     loc_str = get_location_name(poly_center_lat, poly_center_lon)
 
-    # 4. Dynamic Open-Sea Ship Routes passing directly through origin points
-    vessel1_path = [
-        {"timestamp": "2026-09-07T01:42:00Z", "lat": round(calc_origin1_lat + 0.115, 5), "lon": round(calc_origin1_lon - 0.115, 5), "heading": 125, "sog": 11.4},
-        {"timestamp": "2026-09-07T02:18:00Z", "lat": round(calc_origin1_lat + 0.057, 5), "lon": round(calc_origin1_lon - 0.057, 5), "heading": 125, "sog": 11.4},
-        {"timestamp": hindcast_timestamp1, "lat": round(calc_origin1_lat, 5), "lon": round(calc_origin1_lon, 5), "heading": 125, "sog": 11.4},
-        {"timestamp": "2026-09-07T03:30:00Z", "lat": round(calc_origin1_lat - 0.085, 5), "lon": round(calc_origin1_lon + 0.085, 5), "heading": 125, "sog": 11.4},
-        {"timestamp": detection_timestamp, "lat": round(calc_origin1_lat - 0.170, 5), "lon": round(calc_origin1_lon + 0.170, 5), "heading": 125, "sog": 11.4},
-    ]
+    # 4. Coordinate-Aware Dynamic AIS Vessel Resolution & Tracking
+    from backend.ais_service import fetch_ais_vessels_for_coordinates
+    ais_data = fetch_ais_vessels_for_coordinates(
+        lat=poly_center_lat,
+        lon=poly_center_lon,
+        origin_lat=calc_origin1_lat,
+        origin_lon=calc_origin1_lon,
+        is_dual=is_dual,
+        detection_timestamp=detection_timestamp
+    )
+    vessels_list = ais_data["vessels"]
 
-    vessel2_path = [
-        {"timestamp": "2026-09-07T01:40:00Z", "lat": round(calc_origin2_lat - 0.090, 5), "lon": round(calc_origin2_lon + 0.075, 5), "heading": 310, "sog": 10.8},
-        {"timestamp": hindcast_timestamp2, "lat": round(calc_origin2_lat, 5), "lon": round(calc_origin2_lon, 5), "heading": 310, "sog": 10.8},
-        {"timestamp": "2026-09-07T03:20:00Z", "lat": round(calc_origin2_lat + 0.090, 5), "lon": round(calc_origin2_lon - 0.075, 5), "heading": 310, "sog": 10.8},
-        {"timestamp": detection_timestamp, "lat": round(calc_origin2_lat + 0.180, 5), "lon": round(calc_origin2_lon - 0.155, 5), "heading": 310, "sog": 10.8},
-    ]
-
-    # 5. +48-Hour Forward Forecast Sequence with Physical Fay Spreading
-    forecast_steps_data = [
-        {"forecast_hour": 0, "timestamp": detection_timestamp, "point": {"lat": poly_center_lat, "lon": poly_center_lon}, "area_km2": calculated_area_km2},
-        {"forecast_hour": 3, "timestamp": "2026-09-07T07:32:00Z", "point": {"lat": round(poly_center_lat + 0.023, 4), "lon": round(poly_center_lon + 0.034, 4)}, "area_km2": round(calculated_area_km2 * 1.35, 2)},
-        {"forecast_hour": 6, "timestamp": "2026-09-07T10:32:00Z", "point": {"lat": round(poly_center_lat + 0.046, 4), "lon": round(poly_center_lon + 0.068, 4)}, "area_km2": round(calculated_area_km2 * 1.65, 2)},
-        {"forecast_hour": 12, "timestamp": "2026-09-07T16:32:00Z", "point": {"lat": round(poly_center_lat + 0.092, 4), "lon": round(poly_center_lon + 0.136, 4)}, "area_km2": round(calculated_area_km2 * 2.40, 2)},
-        {"forecast_hour": 18, "timestamp": "2026-09-07T22:32:00Z", "point": {"lat": round(poly_center_lat + 0.138, 4), "lon": round(poly_center_lon + 0.204, 4)}, "area_km2": round(calculated_area_km2 * 3.05, 2)},
-        {"forecast_hour": 24, "timestamp": "2026-09-08T04:32:00Z", "point": {"lat": round(poly_center_lat + 0.168, 4), "lon": round(poly_center_lon + 0.251, 4)}, "area_km2": round(calculated_area_km2 * 3.85, 2)},
-        {"forecast_hour": 36, "timestamp": "2026-09-08T16:32:00Z", "point": {"lat": round(poly_center_lat + 0.174, 4), "lon": round(poly_center_lon + 0.350, 4)}, "area_km2": round(calculated_area_km2 * 4.70, 2)},
-        {"forecast_hour": 48, "timestamp": "2026-09-09T04:32:00Z", "point": {"lat": round(poly_center_lat + 0.176, 4), "lon": round(poly_center_lon + 0.411, 4)}, "area_km2": round(calculated_area_km2 * 5.60, 2)},
-    ]
-
-    vessels_list = [
-        {
-            "mmsi": 419001284,
-            "name": "MT OCEAN STAR",
-            "imo": "9384910",
-            "type": "Crude Oil Tanker",
-            "flag": "Liberia",
-            "path": vessel1_path
-        }
-    ]
-    if is_dual:
-        vessels_list.append({
-            "mmsi": 419002931,
-            "name": "GULF VOYAGER",
-            "imo": "9412089",
-            "type": "Chemical/Oil Products Tanker",
-            "flag": "Marshall Islands",
-            "path": vessel2_path
-        })
+    # 5. Generate Forward Lagrangian Drift Forecast (+48h)
+    from backend.metocean import generate_live_drift_forecast
+    forecast_steps_data = generate_live_drift_forecast(
+        start_lat=poly_center_lat,
+        start_lon=poly_center_lon,
+        start_time_iso=detection_timestamp,
+        drift_speed_kmh=1.5,
+        drift_dir_deg=55.0,
+        hours_forward=48
+    )
 
     # 6. Sensor & Modality Metadata
     meta_payload = {
@@ -268,7 +243,7 @@ def build_and_register_spill_scenario(
             "statutory_inquiry": {
                 "agency": "Directorate General of Shipping (DGS) & MPCB",
                 "dossier_reference": f"ICG/MRCC/ENV-{spill_id}",
-                "targets": ["MT OCEAN STAR (IMO: 9384910)", "GULF VOYAGER (IMO: 9412089)"] if is_dual else ["MT OCEAN STAR (IMO: 9384910)"]
+                "targets": [f"{v['name']} (IMO: {v['imo']})" for v in vessels_list[: (2 if is_dual else 1)]]
             }
         }
     }
