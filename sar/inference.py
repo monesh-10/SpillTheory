@@ -1,97 +1,113 @@
+import os
 from pathlib import Path
 import numpy as np
-from scipy import ndimage
+import torch
+import torch.nn as nn
 
-try:
-    import tensorflow as tf
-    HAS_TF = True
-except ImportError:
-    tf = None
-    HAS_TF = False
-
-from .preprocessing import load_and_preprocess
+from .preprocessing import load_and_preprocess, SARValidationError
 from .postprocess import extract_spill_info
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "unet_oilspill.h5"
+DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "sar" / "best_model_epoch19.pt"
 
-DEFAULT_THRESHOLD = 0.4
-
-
-def load_sar_model(model_path=DEFAULT_MODEL_PATH):
-    """Load the existing pretrained SAR U-Net model if TensorFlow is available."""
-    if HAS_TF and Path(model_path).exists():
-        try:
-            return tf.keras.models.load_model(
-                model_path,
-                compile=False,
-            )
-        except Exception:
-            return None
-    return None
-
-
-def sar_predict(
-    image_path,
-    model=None,
-    threshold=DEFAULT_THRESHOLD,
-):
-    """
-    Run SAR inference pipeline with U-Net or calibrated radar backscatter fallback.
-    """
-    image_norm, model_input = load_and_preprocess(image_path)
-
-    if model is None and HAS_TF:
-        model = load_sar_model()
-
-    if model is not None:
-        prediction = model.predict(
-            model_input,
-            verbose=0,
+class DoubleConv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True)
         )
-        probability_map = prediction[0, :, :, 0]
-    else:
-        # High-fidelity SAR radar dark-spot segmentation & binary mask handler (data-driven, zero filename reliance)
-        unique_vals = np.unique(np.round(image_norm, 2))
-        std_val = float(image_norm.std())
-        min_val = float(image_norm.min())
-        max_val = float(image_norm.max())
+    def forward(self, x): return self.block(x)
 
-        # 1. Flat image (all zeros or all white) -> Clean ocean
-        if max_val - min_val < 0.05:
-            probability_map = np.full_like(image_norm, 0.01, dtype=np.float32)
-        # 2. Binary / discrete mask upload (e.g. user uploads an annotated mask)
-        elif len(unique_vals) <= 4:
-            mean_val = float(image_norm.mean())
-            if mean_val <= 0.60:
-                probability_map = (image_norm > 0.5).astype(np.float32)
-            else:
-                probability_map = (image_norm <= 0.5).astype(np.float32)
-        # 3. Clean ocean physical radar clutter check (no low-backscatter damping)
-        elif std_val < 0.07 and min_val > 0.18:
-            probability_map = np.full_like(image_norm, 0.01, dtype=np.float32)
+class UNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.enc1 = DoubleConv(2, 32)
+        self.enc2 = DoubleConv(32, 64)
+        self.enc3 = DoubleConv(64, 128)
+        self.enc4 = DoubleConv(128, 256)
+        self.pool = nn.MaxPool2d(2)
+        self.bottleneck = DoubleConv(256, 512)
+        
+        self.up4 = nn.ConvTranspose2d(512, 256, 2, stride=2)
+        self.dec4 = DoubleConv(512, 256)
+        self.up3 = nn.ConvTranspose2d(256, 128, 2, stride=2)
+        self.dec3 = DoubleConv(256, 128)
+        self.up2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        self.dec2 = DoubleConv(128, 64)
+        self.up1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
+        self.dec1 = DoubleConv(64, 32)
+        self.out = nn.Conv2d(32, 1, 1)
+
+    def forward(self, x):
+        e1 = self.enc1(x)
+        e2 = self.enc2(self.pool(e1))
+        e3 = self.enc3(self.pool(e2))
+        e4 = self.enc4(self.pool(e3))
+        b = self.bottleneck(self.pool(e4))
+        
+        d4 = self.up4(b)
+        d4 = torch.cat([d4, e4], dim=1)
+        d4 = self.dec4(d4)
+        
+        d3 = self.up3(d4)
+        d3 = torch.cat([d3, e3], dim=1)
+        d3 = self.dec3(d3)
+        
+        d2 = self.up2(d3)
+        d2 = torch.cat([d2, e2], dim=1)
+        d2 = self.dec2(d2)
+        
+        d1 = self.up1(d2)
+        d1 = torch.cat([d1, e1], dim=1)
+        d1 = self.dec1(d1)
+        return self.out(d1)
+
+_model_cache = None
+
+def get_sar_model(model_path=DEFAULT_MODEL_PATH):
+    global _model_cache
+    if _model_cache is not None:
+        return _model_cache
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = UNet().to(device)
+    ckpt = torch.load(model_path, map_location=device, weights_only=False)
+    
+    state_dict = ckpt["model"]
+    new_state = {}
+    for k, v in state_dict.items():
+        if k.startswith("module."):
+            new_state[k[7:]] = v
         else:
-            # 4. Multi-scale adaptive radar backscatter damping segmentation
-            smoothed = ndimage.gaussian_filter(image_norm, sigma=1.5)
-            # Compute Otsu threshold to separate dark oil slick from sea clutter
-            hist, bin_edges = np.histogram(smoothed, bins=64, range=(0, 1))
-            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
-            weight1 = np.cumsum(hist)
-            weight2 = np.cumsum(hist[::-1])[::-1]
-            mean1 = np.cumsum(hist * bin_centers) / np.maximum(weight1, 1e-6)
-            mean2 = (np.cumsum((hist * bin_centers)[::-1]) / np.maximum(weight2[::-1], 1e-6))[::-1]
-            variance = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
-            otsu_thresh = float(bin_centers[np.argmax(variance)])
-            
-            # Distance from threshold scaled by standard deviation
-            z = (otsu_thresh - smoothed) / max(std_val, 0.05)
-            probability_map = (1.0 / (1.0 + np.exp(-5.0 * z))).astype(np.float32)
+            new_state[k] = v
+    model.load_state_dict(new_state)
+    model.eval()
+    _model_cache = (model, device)
+    return _model_cache
 
-    raw_mask = (
-        probability_map >= threshold
-    ).astype("uint8")
-
+def sar_predict(image_path, model=None, threshold=0.5):
+    raw_image, model_input = load_and_preprocess(image_path)
+    
+    if model is None:
+        model_tuple = get_sar_model()
+    else:
+        model_tuple = model
+        
+    unet_model, device = model_tuple
+        
+    with torch.no_grad():
+        x = torch.from_numpy(model_input).to(device)
+        logits = unet_model(x)
+        probs = torch.sigmoid(logits)
+        prob_np = probs.cpu().numpy()[0, 0, :, :]
+        
+    raw_mask = (prob_np >= threshold).astype(np.uint8)
+    
     info = extract_spill_info(raw_mask)
     topology = info.get("topology", {})
     num_sources = topology.get("num_sources", 1)
@@ -104,7 +120,7 @@ def sar_predict(
         source_class = "Single Ship Leak (1 Vessel)"
 
     unet_analysis = {
-        "model_name": "U-Net Oil Spill Deep Segmentation Network",
+        "model_name": "PyTorch SAR U-Net (Epoch 19)",
         "vessel_source_classification": source_class,
         "num_vessels_detected": num_sources,
         "topology": topology.get("topology", "UNKNOWN"),
@@ -114,8 +130,8 @@ def sar_predict(
     }
 
     return {
-        "image": image_norm,
-        "probability_map": probability_map,
+        "image": raw_image,
+        "probability_map": prob_np,
         "raw_mask": raw_mask,
         "clean_mask": info["clean_mask"],
         "coverage_percent": info["coverage_percent"],

@@ -64,8 +64,8 @@ _sar_model = None
 def get_sar_model():
     global _sar_model
     if _sar_model is None:
-        from sar.inference import load_sar_model
-        _sar_model = load_sar_model(str(MODELS_DIR / "unet_oilspill.h5"))
+        from sar.inference import get_sar_model as load_sar_model_func
+        _sar_model = load_sar_model_func()
     return _sar_model
 
 from backend.scenario_builder import (
@@ -347,7 +347,7 @@ async def detect_sar(
     center_lon: float = Form(72.464),
     origin_lat: float = Form(None),
     origin_lon: float = Form(None),
-    threshold: float = Form(0.40)
+    threshold: float = Form(0.50)
 ):
     """
     Module 6.1: Runs real U-Net SAR segmentation inference and generates
@@ -358,9 +358,9 @@ async def detect_sar(
     from sar.inference import sar_predict
     from sar.geo_convert import mask_to_geojson_polygons
 
-    suffix = Path(file.filename).suffix.lower() if (file and file.filename) else ".png"
-    if not suffix or suffix not in [".png", ".jpg", ".jpeg", ".tif", ".tiff"]:
-        suffix = ".png"
+    suffix = Path(file.filename).suffix.lower() if (file and file.filename) else ".tif"
+    if not suffix or suffix not in [".tif", ".tiff"]:
+        raise HTTPException(status_code=400, detail="Only SAR TIFF (.tif, .tiff) files are supported.")
     temp_img_path = ROOT / "backend" / f"_temp_sar{suffix}"
     
     if demo_filename:
@@ -420,13 +420,6 @@ async def detect_sar(
         mask_filename = f"_mask_{new_spill_id}.png"
         mask_uint8 = (clean_mask * 255).astype(np.uint8)
         mask_pil = Image.fromarray(mask_uint8)
-        try:
-            with Image.open(temp_img_path) as orig_img:
-                orig_w, orig_h = orig_img.size
-                if (orig_w, orig_h) != (256, 256):
-                    mask_pil = mask_pil.resize((orig_w, orig_h), Image.NEAREST)
-        except Exception:
-            pass
         mask_pil.save(DEMO_DATA_DIR / mask_filename)
         mask_pil.save(DEMO_DATA_DIR / "_latest_mask.png")
 
