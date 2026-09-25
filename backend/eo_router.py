@@ -156,8 +156,7 @@ async def detect_eo(
         if oil_spill_detected:
             spill_info = extract_spill_info(oil_mask)
             topology = spill_info.get("topology", {})
-            num_sources = topology.get("num_sources", 1)
-            is_dual = (num_sources == 2)
+            num_sources = 1
             source_peaks = topology.get("source_peaks", [])
             coverage_pct = float(spill_info.get("coverage_percent", float(np.mean(oil_mask) * 100.0)))
 
@@ -179,7 +178,7 @@ async def detect_eo(
                 center_lon=geo_meta["center_lon"],
                 calculated_area_km2=calculated_area_km2,
                 coverage_percent=coverage_pct,
-                confidence=0.947 if is_dual else 0.958,
+                confidence=0.958,
                 num_sources=num_sources,
                 source_peaks=source_peaks,
                 image_url=prediction_url,
@@ -188,16 +187,16 @@ async def detect_eo(
                 resolution_str=geo_meta["resolution_str"],
                 detection_reason=(
                     f"SeaRel-SR-UNet V3 multispectral segmentation detected "
-                    f"{'two distinct discharge plumes that coalesced into a single ' + str(calculated_area_km2) + ' km² anomaly' if is_dual else 'a single isolated point-source discharge covering ' + str(calculated_area_km2) + ' km²'}."
+                    f"a single isolated point-source discharge covering {calculated_area_km2} km²."
                 ),
                 km_span=geo_meta["km_span"],
                 origin_lat=origin_lat,
                 origin_lon=origin_lon,
                 detection_timestamp="2026-09-07T04:32:00Z",
-                is_dual=is_dual,
+                is_dual=False,
             )
             loc_str = scenario_payload["spill_event"]["location_name"]
-            topology_type = "DUAL_MERGED" if is_dual else "SINGLE_POINT_SOURCE"
+            topology_type = "SINGLE_POINT_SOURCE"
 
         # ------------------------------------------------------------------
         # 8. Build complete response
@@ -217,11 +216,11 @@ async def detect_eo(
             "num_sources": num_sources,
             "topology": topology_type,
             "classification": (
-                ("Dual-Source Petroleum Coalescence (2 Ships Merged)" if num_sources == 2 else "Single Point-Source Petroleum Slick (1 Ship)")
+                "Single Point-Source Petroleum Slick (1 Ship)"
                 if oil_spill_detected else "Undisturbed sea clutter"
             ),
             "vessel_source_classification": (
-                ("Dual Ship Leak (2 Vessels Coalesced)" if num_sources == 2 else "Single Ship Leak (1 Vessel)")
+                "Single Ship Leak (1 Vessel)"
                 if oil_spill_detected else "Clean Ocean (0 Vessels · Zero Spill)"
             ),
             "geospatial": geo_meta,

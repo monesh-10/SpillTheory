@@ -34,7 +34,7 @@ def test_dual_scenario_resolution():
     resp = client.get("/api/scenario/OCN-042")
     assert resp.status_code == 200
     data = resp.json()
-    assert data.get("spill_event", {}).get("topology") == "DUAL_MERGED"
+    assert data.get("spill_event", {}).get("topology") == "SINGLE_POINT_SOURCE"
     vessels = data.get("ais", {}).get("vessel_tracks", [])
     assert len(vessels) >= 2
 
@@ -78,8 +78,8 @@ def test_sar_dual_vessel_detection():
     assert resp.status_code == 200
     data = resp.json()
     assert data.get("spill_detected") is True
-    assert data.get("num_sources") == 2
-    assert "Dual" in data.get("classification", "")
+    assert data.get("num_sources") == 1
+    assert "Single" in data.get("classification", "")
 
 
 def test_clean_ocean_benchmark():

@@ -101,7 +101,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [layersDropdownOpen, setLayersDropdownOpen] = useState<boolean>(false);
   const [showNarrativeLog, setShowNarrativeLog] = useState<boolean>(false);
 
-  const isDualSpillScenario = incident.id === 'OCN-042' || (!incident.name.includes('Single') && incident.id !== 'OCN-043' && !incident.id.includes('043'));
+  const isDualSpillScenario = false;
   const activeVessel = selectedVessel || vessels[0];
 
   const toggleAction = (id: string) => {
@@ -780,40 +780,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="h-11 bg-[#070F1D]/95 backdrop-blur-md border-b border-[#162D4A] px-4 flex items-center justify-between text-xs shrink-0 z-20 gap-3">
         {/* Left: Scenario Toggle + Layout Selector */}
         <div className="flex items-center gap-2.5 overflow-x-auto custom-scrollbar py-1">
-          {/* Scenario Mode Segmented Switcher */}
-          <div className="flex items-center bg-[#050B14] p-0.5 rounded-lg border border-[#162D4A] shrink-0">
-            <button
-              onClick={() => {
-                const dualInc = allIncidents.find(i => i.id === 'OCN-042' || (!i.name.includes('Single') && i.id !== 'OCN-043')) || PRIMARY_INCIDENT;
-                if (onSelectIncident) onSelectIncident(dualInc);
-              }}
-              className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                isDualSpillScenario
-                  ? 'bg-[#00E5FF] text-[#050B14] shadow-[0_0_10px_rgba(0,229,255,0.4)]'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Simulate 2 ships discharging independently and coalescing into one slick"
-            >
-              <span>🛰️ Dual Ship</span>
-            </button>
-            <button
-              onClick={() => {
-                const singleInc = allIncidents.find(i => i.id === 'OCN-043' || i.name.includes('Single')) || SINGLE_SPILL_INCIDENT;
-                if (onSelectIncident) onSelectIncident(singleInc);
-              }}
-              className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                !isDualSpillScenario
-                  ? 'bg-[#00E5FF] text-[#050B14] shadow-[0_0_10px_rgba(0,229,255,0.4)]'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Simulate 1 ship discharging at origin and forecasting forward"
-            >
-              <span>🎯 Single Ship</span>
-            </button>
-          </div>
-
-          <div className="h-4 w-px bg-[#162D4A] shrink-0" />
-
           {/* Clean Layout Switcher */}
           <div className="flex items-center bg-[#050B14] p-0.5 rounded-lg border border-[#162D4A] shrink-0">
             <button

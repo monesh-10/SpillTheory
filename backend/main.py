@@ -382,9 +382,7 @@ async def detect_sar(
         clean_mask = res["clean_mask"]
         topology = res.get("topology", {})
         
-        # Determine Single vs Dual Ship Classification directly from CV morphological topology
         num_sources = topology.get("num_sources", 1)
-        is_dual = (num_sources == 2)
         
         new_spill_id = f"SAR_{datetime.now(timezone.utc).strftime('%H%M%S')}"
         saved_sar_name = demo_filename if demo_filename else f"_sar_{new_spill_id}{suffix}"
@@ -463,19 +461,19 @@ async def detect_sar(
             center_lon=center_lon,
             calculated_area_km2=calculated_area_km2,
             coverage_percent=coverage,
-            confidence=0.947 if is_dual else 0.958,
+            confidence=0.958,
             num_sources=num_sources,
             source_peaks=source_peaks,
             image_url=f"http://localhost:8000/demo_data/{saved_sar_name}",
             mask_url=f"http://localhost:8000/demo_data/{mask_filename}",
             sensor_name="Sentinel-1 / ALOS PALSAR C/L-Band SAR",
             resolution_str="12.5m pixel spacing",
-            detection_reason=f"U-Net deep segmentation detected {'two distinct discharge plumes that coalesced into a single ' + str(calculated_area_km2) + ' km² anomaly' if is_dual else 'a single isolated point-source discharge covering ' + str(calculated_area_km2) + ' km²'}.",
+            detection_reason=f"U-Net deep segmentation detected a single isolated point-source discharge covering {calculated_area_km2} km².",
             km_span=15.0,
             origin_lat=origin_lat,
             origin_lon=origin_lon,
             detection_timestamp="2026-09-07T04:32:00Z",
-            is_dual=is_dual,
+            is_dual=(num_sources == 2),
         )
         loc_str = scenario_payload["spill_event"]["location_name"]
         
@@ -486,17 +484,17 @@ async def detect_sar(
             "location": loc_str,
             "coverage_percent": coverage,
             "area_km2": calculated_area_km2,
-            "num_sources": 2 if is_dual else 1,
-            "topology": "DUAL_MERGED" if is_dual else "SINGLE_POINT_SOURCE",
-            "classification": "Dual-Source Petroleum Coalescence (2 Ships Merged)" if is_dual else "Single Point-Source Petroleum Slick (1 Ship)",
-            "vessel_source_classification": "Dual Ship Leak (2 Vessels Coalesced)" if is_dual else "Single Ship Leak (1 Vessel)",
+            "num_sources": num_sources,
+            "topology": topology.get("topology", "SINGLE_POINT_SOURCE"),
+            "classification": topology.get("classification", "Single Point-Source Petroleum Slick"),
+            "vessel_source_classification": f"{num_sources} Vessel Leak" if num_sources > 1 else "Single Ship Leak (1 Vessel)",
             "unet_analysis": res.get("unet_analysis", {
                 "model_name": "U-Net Oil Spill Deep Segmentation Network",
-                "vessel_source_classification": "Dual Ship Leak (2 Vessels Coalesced)" if is_dual else "Single Ship Leak (1 Vessel)",
-                "num_vessels_detected": 2 if is_dual else 1,
-                "topology": "DUAL_MERGED" if is_dual else "SINGLE_POINT_SOURCE",
-                "confidence": 0.947 if is_dual else 0.958,
-                "reason": f"U-Net deep segmentation detected {'two distinct discharge plumes that coalesced' if is_dual else 'a single isolated point-source discharge'}."
+                "vessel_source_classification": f"{num_sources} Vessel Leak" if num_sources > 1 else "Single Ship Leak (1 Vessel)",
+                "num_vessels_detected": num_sources,
+                "topology": topology.get("topology", "SINGLE_POINT_SOURCE"),
+                "confidence": 0.958,
+                "reason": "U-Net deep segmentation detected a single isolated point-source discharge."
             }),
             "max_probability": float(res.get("probability_map", clean_mask).max()),
             "sar_metadata": scenario_payload["sar_metadata"],

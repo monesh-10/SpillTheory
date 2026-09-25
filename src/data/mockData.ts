@@ -12,26 +12,6 @@ import {
 } from '../types';
 
 export const PRIMARY_INCIDENT: Incident = {
-  id: 'OCN-042',
-  code: 'SAR_043659',
-  name: 'Offshore Mumbai Dual Coalesced Spill (2 Ships Merged)',
-  locationName: 'Offshore Mumbai Basin (Arabian Sea)',
-  coordinates: [18.112, 72.464],
-  detectedAt: '07 Sep 2026 04:32 UTC',
-  estimatedAgeHours: '5–8 hours',
-  slickAreaKm2: 13.48,
-  slickPerimeterKm: 31.6,
-  confidencePercent: 94.7,
-  classification: 'Dual-Source Petroleum Coalescence',
-  sensor: 'Sentinel-1 SAR (C-Band Interferometric Wide)',
-  status: 'UNDER INVESTIGATION',
-  priority: 'HIGH',
-  backscatterDb: -9.2,
-  model: 'OceanTrace-Seg v1.4 (Multi-Source GMM)',
-  summary: 'Merged oceanic backscatter anomaly. Spatial deconvolution indicates two distinct historical discharge sources (MT Ocean Star & Gulf Voyager) that advected and coalesced into a single 13.48 km² anomaly.'
-};
-
-export const SINGLE_SPILL_INCIDENT: Incident = {
   id: 'OCN-043',
   code: 'SAR_043701',
   name: 'Offshore Mumbai Single Point-Source Spill (1 Ship)',
@@ -51,48 +31,9 @@ export const SINGLE_SPILL_INCIDENT: Incident = {
   summary: 'Single isolated dark patch detected. Reconstructed reverse Lagrangian trajectory attributes discharge solely to MT Ocean Star (91.7% confidence).'
 };
 
-export const ALL_INCIDENTS: Incident[] = [
-  PRIMARY_INCIDENT,
-  SINGLE_SPILL_INCIDENT,
-  {
-    id: 'OCN-041',
-    code: 'SAR_043612',
-    name: 'Krishna-Godavari Deepwater Plume',
-    locationName: 'Bay of Bengal (KG Basin)',
-    coordinates: [15.821, 81.942],
-    detectedAt: '06 Sep 2026 22:14 UTC',
-    estimatedAgeHours: '12–16 hours',
-    slickAreaKm2: 7.82,
-    slickPerimeterKm: 19.4,
-    confidencePercent: 89.3,
-    classification: 'Probable emulsified crude',
-    sensor: 'Sentinel-1 SAR',
-    status: 'MONITORING',
-    priority: 'MEDIUM',
-    backscatterDb: -8.4,
-    model: 'OceanTrace-Seg v1.4',
-    summary: 'Elongated sheen feature aligned with local boundary current. Moderate probability of bilge cleaning along offshore shipping channel.'
-  },
-  {
-    id: 'OCN-039',
-    code: 'SAR_043588',
-    name: 'Gulf of Mannar Coral Zone Alert',
-    locationName: 'Gulf of Mannar Biosphere',
-    coordinates: [8.852, 78.621],
-    detectedAt: '05 Sep 2026 14:05 UTC',
-    estimatedAgeHours: '18–24 hours',
-    slickAreaKm2: 4.15,
-    slickPerimeterKm: 12.1,
-    confidencePercent: 91.1,
-    classification: 'Light fuel oil sheen',
-    sensor: 'Sentinel-1 SAR + Sentinel-2 MSI',
-    status: 'CONTAINED',
-    priority: 'LOW',
-    backscatterDb: -10.1,
-    model: 'OceanTrace-Seg v1.4',
-    summary: 'Contained small-vessel discharge in shallow transit strait. Containment boom deployment completed by local port trust.'
-  }
-];
+export const SINGLE_SPILL_INCIDENT = PRIMARY_INCIDENT;
+
+export const ALL_INCIDENTS: Incident[] = [];
 
 export const PRIMARY_METOCEAN: MetOceanTelemetry = {
   timestamp: '07 Sep 2026 04:30 UTC',

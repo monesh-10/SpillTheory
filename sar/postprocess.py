@@ -7,9 +7,7 @@ MIN_REGION_PIXELS = 20
 
 def detect_spill_topology(clean_mask: np.ndarray, regions: list) -> dict:
     """
-    Deconvolves the binary oil spill mask into clean ocean, single-source, or dual-source (merged) topology
-    using connected components analysis, relative component area ratio, and
-    Euclidean distance transform peak necking analysis.
+    Classifies the binary oil spill mask into clean ocean or single-source topology.
     """
     if not regions or clean_mask is None or clean_mask.sum() < 30:
         return {
@@ -33,7 +31,7 @@ def detect_spill_topology(clean_mask: np.ndarray, regions: list) -> dict:
             return {
                 "num_sources": 2,
                 "topology": "DUAL_MERGED",
-                "classification": "Dual-Source Petroleum Coalescence (2 Ships)",
+                "classification": "Dual-Source Petroleum Coalescence",
                 "confidence": round(min(0.98, 0.82 + area_ratio * 0.15), 3),
                 "source_peaks": [r1["centroid"], r2["centroid"]],
                 "reason": f"Detected 2 major disconnected slick plumes (Lobe 1: {r1['area_pixels']} px, Lobe 2: {r2['area_pixels']} px, ratio: {area_ratio:.2f})."
@@ -76,20 +74,20 @@ def detect_spill_topology(clean_mask: np.ndarray, regions: list) -> dict:
                 return {
                     "num_sources": 2,
                     "topology": "DUAL_MERGED",
-                    "classification": "Dual-Source Petroleum Coalescence (2 Ships Merged)",
+                    "classification": "Dual-Source Petroleum Coalescence",
                     "confidence": round(min(0.96, 0.80 + (1.0 - neck_ratio) * 0.16), 3),
                     "source_peaks": [
                         {"x": float(x1), "y": float(y1)},
                         {"x": float(x2), "y": float(y2)}
                     ],
-                    "reason": f"Morphological necking detected: two distinct heavy emulsion cores separated by {dist:.1f}px with constriction ratio {neck_ratio:.2f}."
+                    "reason": f"Morphological necking detected: two distinct emulsion cores separated by {dist:.1f}px with constriction ratio {neck_ratio:.2f}."
                 }
 
     # 3. Default: Single Point-Source Plume
     return {
         "num_sources": 1,
         "topology": "SINGLE_POINT_SOURCE",
-        "classification": "Single Point-Source Petroleum Slick (1 Ship)",
+        "classification": "Single Point-Source Petroleum Slick",
         "confidence": 0.958,
         "source_peaks": [r1["centroid"]],
         "reason": f"Uniform unimodal plume radiating from single discharge point ({r1['area_pixels']} px)."

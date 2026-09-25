@@ -121,11 +121,10 @@ export const EODetectionView: React.FC<EODetectionViewProps> = ({ onOpenWorkspac
   const handleOpenDigitalTwin = () => {
     if (onSpillDetected && result?.spill_id) {
       const dynamicSpillId = result.spill_id;
-      const isDual = result.num_sources === 2 || result.topology === 'DUAL_MERGED';
       const customInc: Incident = {
         id: dynamicSpillId,
         code: dynamicSpillId,
-        name: result.location || (isDual ? 'Offshore Mumbai Basin (Dual Coalesced EO)' : 'Offshore Mumbai Basin (Single Point EO)'),
+        name: result.location || 'Offshore Mumbai Basin (Single Point EO)',
         locationName: result.location || 'Offshore Mumbai Basin, Arabian Sea',
         coordinates: [
           Number(result.scenario?.spill_event?.centroid?.lat ?? result.geospatial?.center_lat ?? 18.112),
@@ -133,10 +132,10 @@ export const EODetectionView: React.FC<EODetectionViewProps> = ({ onOpenWorkspac
         ],
         detectedAt: result.scenario?.spill_event?.timestamp || '2026-09-07T04:32:00Z',
         estimatedAgeHours: '5.5 hours',
-        slickAreaKm2: Number(result.area_km2 || (isDual ? 13.48 : 8.25)),
-        slickPerimeterKm: Math.round(Math.sqrt(Number(result.area_km2 || (isDual ? 13.48 : 8.25))) * 8.5 * 10) / 10,
+        slickAreaKm2: Number(result.area_km2 || 8.25),
+        slickPerimeterKm: Math.round(Math.sqrt(Number(result.area_km2 || 8.25)) * 8.5 * 10) / 10,
         confidencePercent: Math.round(Number(result.scenario?.spill_event?.confidence || 0.958) * 100),
-        classification: result.classification || (isDual ? 'Dual-Source Petroleum Coalescence (2 Ships Merged)' : 'Single Point-Source Petroleum Slick (1 Ship)'),
+        classification: result.classification || 'Single Point-Source Petroleum Slick (1 Ship)',
         sensor: result.scenario?.sensor_metadata?.sensor || result.geospatial?.sensor || 'Sentinel-2 MSI / Landsat Multispectral Optical',
         status: 'UNDER INVESTIGATION',
         priority: 'HIGH',

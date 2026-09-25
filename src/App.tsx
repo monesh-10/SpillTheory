@@ -34,13 +34,13 @@ import {
 import { Incident, Vessel, MapLayerState, HindcastResult, ForecastStep, ShorelineRiskZone, MetOceanTelemetry } from './types';
 
 export const App: React.FC = () => {
-  // Navigation & Page State (Default to 'overview' command center)
-  const [currentPage, setCurrentPage] = useState<NavigationPage>('overview');
+  // Navigation & Page State (Default to 'landing' command center)
+  const [currentPage, setCurrentPage] = useState<NavigationPage>('landing');
   const [navRailExpanded, setNavRailExpanded] = useState<boolean>(false);
 
   // Core Data States (Dynamic & Backend Synced)
-  const [allIncidents, setAllIncidents] = useState<Incident[]>(ALL_INCIDENTS);
-  const [currentIncident, setCurrentIncident] = useState<Incident>(ALL_INCIDENTS[0]);
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]);
+  const [currentIncident, setCurrentIncident] = useState<Incident | null>(null);
   const [vessels, setVessels] = useState<Vessel[]>(SUSPECT_VESSELS);
   const [selectedVessel, setSelectedVessel] = useState<Vessel | null>(SUSPECT_VESSELS[0]);
   const [hindcast, setHindcast] = useState<HindcastResult>(PRIMARY_HINDCAST);
@@ -64,18 +64,20 @@ export const App: React.FC = () => {
   // Fetch full scenario bundle whenever active incident changes
   useEffect(() => {
     let mounted = true;
-    apiService.getScenarioBundle(currentIncident.id).then((bundle) => {
-      if (mounted && bundle) {
-        setVessels(bundle.vessels);
-        setSelectedVessel(bundle.vessels[0] || null);
-        setHindcast(bundle.hindcast);
-        setForecastSteps(bundle.forecastSteps);
-        setShorelineRisk(bundle.shorelineRisk);
-        setMetocean(bundle.metocean);
-      }
-    });
+    if (currentIncident) {
+      apiService.getScenarioBundle(currentIncident.id).then((bundle) => {
+        if (mounted && bundle) {
+          setVessels(bundle.vessels);
+          setSelectedVessel(bundle.vessels[0] || null);
+          setHindcast(bundle.hindcast);
+          setForecastSteps(bundle.forecastSteps);
+          setShorelineRisk(bundle.shorelineRisk);
+          setMetocean(bundle.metocean);
+        }
+      });
+    }
     return () => { mounted = false; };
-  }, [currentIncident.id]);
+  }, [currentIncident?.id]);
 
   // Map Geospatial Layers Active State
   const [layerState, setLayerState] = useState<MapLayerState>({
@@ -133,7 +135,7 @@ export const App: React.FC = () => {
     <div className="flex flex-col h-screen w-screen bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 overflow-hidden font-sans transition-colors duration-200">
       {/* Top Persistent Command Bar */}
       <CommandBar
-        currentIncident={currentIncident}
+        currentIncident={currentIncident || undefined}
         allIncidents={allIncidents}
         onSelectIncident={(inc) => {
           setCurrentIncident(inc);
@@ -168,7 +170,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {(currentPage === 'overview' || currentPage === 'live-twin') && (
+          {(currentPage === 'overview' || currentPage === 'live-twin') && currentIncident && (
             <DashboardView
               incident={currentIncident}
               allIncidents={allIncidents}
@@ -213,7 +215,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentPage === 'hindcast' && (
+          {currentPage === 'hindcast' && currentIncident && (
             <DashboardView
               incident={currentIncident}
               allIncidents={allIncidents}
@@ -238,7 +240,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentPage === 'attribution' && (
+          {currentPage === 'attribution' && currentIncident && (
             <VesselAttributionView
               vessels={vessels}
               onSelectVessel={(v) => {
@@ -254,7 +256,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentPage === 'forecast' && (
+          {currentPage === 'forecast' && currentIncident && (
             <DriftForecastView
               forecastSteps={forecastSteps}
               metocean={metocean}
@@ -275,7 +277,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {(currentPage === 'response-plan' || currentPage === 'impact') && (
+          {(currentPage === 'response-plan' || currentPage === 'impact') && currentIncident && (
             <ResponsePlanView
               shorelineRisk={shorelineRisk}
               incident={currentIncident}
@@ -283,7 +285,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {currentPage === 'reports' && (
+          {currentPage === 'reports' && currentIncident && (
             <ReportsView
               incident={currentIncident}
               topVessel={vessels[0] || SUSPECT_VESSELS[0]}
@@ -337,7 +339,7 @@ export const App: React.FC = () => {
       <FullInvestigationModal
         isOpen={investigationModalOpen}
         onClose={() => setInvestigationModalOpen(false)}
-        incident={currentIncident}
+        incident={currentIncident || ALL_INCIDENTS[0] || PRIMARY_INCIDENT}
         topVessel={vessels[0] || SUSPECT_VESSELS[0]}
         onCompleteInvestigation={() => {
           setSelectedVessel(vessels[0] || SUSPECT_VESSELS[0]);

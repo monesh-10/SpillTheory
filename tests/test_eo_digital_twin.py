@@ -118,14 +118,14 @@ def test_eo_digital_twin_downstream_scenario_resolution():
         calculated_area_km2=11.20,
         coverage_percent=4.98,
         confidence=0.955,
-        num_sources=2,
-        source_peaks=[{"x": 110.0, "y": 110.0}, {"x": 145.0, "y": 145.0}],
+        num_sources=1,
+        source_peaks=[{"x": 110.0, "y": 110.0}],
         image_url="http://localhost:8000/data/outputs/eo_pred.png",
         mask_url="http://localhost:8000/data/outputs/eo_mask.png",
         sensor_name="Sentinel-2 MSI Multispectral Optical",
         resolution_str="10m Ground Sample Distance",
-        detection_reason="SeaRel-SR-UNet V3 dual plume detection.",
-        is_dual=True,
+        detection_reason="SeaRel-SR-UNet V3 single plume detection.",
+        is_dual=False,
     )
 
     # Fetch through the unified /api/scenario/{spill_id} endpoint
@@ -135,7 +135,7 @@ def test_eo_digital_twin_downstream_scenario_resolution():
 
     # Check spill event
     assert data["spill_event"]["spill_id"] == test_spill_id
-    assert data["spill_event"]["topology"] == "DUAL_MERGED"
+    assert data["spill_event"]["topology"] == "SINGLE_POINT_SOURCE"
 
     # Check Lagrangian backtracking was executed
     assert "hindcast" in data

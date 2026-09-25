@@ -46,36 +46,7 @@ def get_location_name(lat: float, lon: float) -> str:
 
 
 # In-memory store of registered spills & scenarios (shared across SAR & EO)
-ACTIVE_SPILLS: list[dict[str, Any]] = [
-    {
-        "spill_id": "OCN-042",
-        "timestamp": "2026-09-07T04:32:00Z",
-        "location": "Offshore Mumbai Basin (Arabian Sea)",
-        "area_km2": 13.48,
-        "status": "Active Investigation - Dual Coalesced"
-    },
-    {
-        "spill_id": "OCN-043",
-        "timestamp": "2026-09-07T04:32:00Z",
-        "location": "Offshore Mumbai Basin (Arabian Sea)",
-        "area_km2": 8.25,
-        "status": "Active Investigation - Single Point-Source"
-    },
-    {
-        "spill_id": "SPILL_002",
-        "timestamp": "2026-07-15T08:00:00Z",
-        "location": get_location_name(13.12, 80.45),
-        "area_km2": 1.5,
-        "status": "Resolved - Attributed"
-    },
-    {
-        "spill_id": "SPILL_003",
-        "timestamp": "2025-11-20T14:45:00Z",
-        "location": get_location_name(9.95, 76.05),
-        "area_km2": 8.7,
-        "status": "Resolved - Natural Seep"
-    }
-]
+ACTIVE_SPILLS: list[dict[str, Any]] = []
 
 CUSTOM_SCENARIOS: dict[str, Any] = {}
 
@@ -109,8 +80,6 @@ def build_and_register_spill_scenario(
     Used by both SAR and EO modalities to guarantee an identical downstream
     Digital Twin, particle backtracking, and dynamic AIS tanker attribution experience.
     """
-    if is_dual is None:
-        is_dual = (num_sources == 2)
 
     # 1. Calculate true polygon centroid from the detected mask vertices
     pts = np.array(polygon_coords[0])
@@ -128,19 +97,43 @@ def build_and_register_spill_scenario(
         norm_y1 = (128.0 - p1.get("y", 128.0)) / 128.0
         peak1_lat = round(center_lat + (norm_y1 * half_span) / 111.0, 5)
         peak1_lon = round(center_lon + (norm_x1 * half_span) / (111.0 * math.cos(math.radians(center_lat))), 5)
-
-    if len(source_peaks) >= 2:
+    
+    if source_peaks and len(source_peaks) > 1 and is_dual:
         p2 = source_peaks[1]
         norm_x2 = (p2.get("x", 128.0) - 128.0) / 128.0
         norm_y2 = (128.0 - p2.get("y", 128.0)) / 128.0
         peak2_lat = round(center_lat + (norm_y2 * half_span) / 111.0, 5)
         peak2_lon = round(center_lon + (norm_x2 * half_span) / (111.0 * math.cos(math.radians(center_lat))), 5)
 
-    # 3. Origin estimate: manual or reverse MetOcean advection vector (-0.047 lat, -0.069 lon along 235° WSW)
-    calc_origin1_lat = float(origin_lat) if origin_lat is not None else round(peak1_lat - 0.047, 4)
-    calc_origin1_lon = float(origin_lon) if origin_lon is not None else round(peak1_lon - 0.069, 4)
-    calc_origin2_lat = round(peak2_lat - 0.047, 4) if is_dual else round(calc_origin1_lat - 0.015, 4)
-    calc_origin2_lon = round(peak2_lon - 0.069, 4) if is_dual else round(calc_origin1_lon + 0.020, 4)
+    # 3. Origin estimate using true multi-source Lagrangian tracking if needed
+    from backend.backtracking.particle_backtracking import run_particle_backtracking
+    from backend.metocean import get_surface_currents
+
+    def velocity_provider(l_lat, l_lon, _t):
+        _, curr_speed, curr_dir = get_surface_currents(l_lat, l_lon)
+        rad = math.radians(curr_dir)
+        u_ms = curr_speed * math.sin(rad)
+        v_ms = curr_speed * math.cos(rad)
+        return u_ms, v_ms
+
+    if origin_lat is not None and origin_lon is not None:
+        calc_origin1_lat = float(origin_lat)
+        calc_origin1_lon = float(origin_lon)
+        calc_origin2_lat = round(calc_origin1_lat - 0.015, 4)
+        calc_origin2_lon = round(calc_origin1_lon + 0.020, 4)
+    else:
+        # Run true simulation for peak 1
+        bt_res1 = run_particle_backtracking((peak1_lat, peak1_lon), velocity_provider)
+        calc_origin1_lat = round(bt_res1["best_centroid"][0], 4)
+        calc_origin1_lon = round(bt_res1["best_centroid"][1], 4)
+        
+        calc_origin2_lat = calc_origin1_lat
+        calc_origin2_lon = calc_origin1_lon
+        if is_dual:
+            # Run independent true simulation for peak 2
+            bt_res2 = run_particle_backtracking((peak2_lat, peak2_lon), velocity_provider)
+            calc_origin2_lat = round(bt_res2["best_centroid"][0], 4)
+            calc_origin2_lon = round(bt_res2["best_centroid"][1], 4)
 
     hindcast_timestamp1 = "2026-09-07T02:47:00Z"
     hindcast_timestamp2 = "2026-09-07T02:35:00Z"
@@ -178,7 +171,7 @@ def build_and_register_spill_scenario(
         "resolution": resolution_str,
         "coverage_percent": round(coverage_percent, 2),
         "confidence": confidence,
-        "num_sources": 2 if is_dual else 1,
+        "num_sources": 1,
         "reason": detection_reason
     }
 
@@ -196,8 +189,8 @@ def build_and_register_spill_scenario(
             "centroid": {"lat": poly_center_lat, "lon": poly_center_lon},
             "confidence": confidence,
             "estimated_age_hours": 5.5,
-            "topology": "DUAL_MERGED" if is_dual else "SINGLE_POINT_SOURCE",
-            "classification": "Dual-Source Petroleum Coalescence (2 Ships Merged)" if is_dual else "Single Point-Source Petroleum Slick (1 Ship)"
+            "topology": "SINGLE_POINT_SOURCE",
+            "classification": "Single Point-Source Petroleum Slick (1 Ship)"
         },
         "sensor_metadata": meta_payload,
         "sar_metadata": meta_payload,  # Preserved for backward compatibility
@@ -206,7 +199,7 @@ def build_and_register_spill_scenario(
                 "point": {"lat": calc_origin1_lat, "lon": calc_origin1_lon},
                 "time": hindcast_timestamp1,
                 "time_window": ["2026-09-07T02:00:00Z", "2026-09-07T03:30:00Z"],
-                "confidence": 0.917 if not is_dual else 0.782,
+                "confidence": 0.917,
                 "secondary_point": {"lat": calc_origin2_lat, "lon": calc_origin2_lon} if is_dual else None
             }
         },
@@ -243,7 +236,7 @@ def build_and_register_spill_scenario(
             "statutory_inquiry": {
                 "agency": "Directorate General of Shipping (DGS) & MPCB",
                 "dossier_reference": f"ICG/MRCC/ENV-{spill_id}",
-                "targets": [f"{v['name']} (IMO: {v['imo']})" for v in vessels_list[: (2 if is_dual else 1)]]
+                "targets": [f"{v['name']} (IMO: {v['imo']})" for v in vessels_list[: 1]]
             }
         }
     }
@@ -255,7 +248,7 @@ def build_and_register_spill_scenario(
         "timestamp": detection_timestamp,
         "location": loc_str,
         "area_km2": calculated_area_km2,
-        "status": f"Active ({'Dual Coalesced' if is_dual else 'Single Point-Source'})"
+        "status": "Active (Single Point-Source)"
     })
 
     return scenario_payload
