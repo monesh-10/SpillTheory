@@ -131,15 +131,20 @@ export const apiService = {
         const origLat = Number(raw.hindcast?.origin_estimate?.point?.lat || cLat - 0.025);
         const origLon = Number(raw.hindcast?.origin_estimate?.point?.lon || cLon - 0.05);
 
+        const incidentName = raw.spill_event?.classification || raw.spill_event?.location_name || (spillId === 'SPILL_002'
+          ? 'Chennai Port Cargo Bunker Leak'
+          : spillId === 'SPILL_003'
+          ? 'Kochi Malabar Coast Seep'
+          : spillId === 'SPILL_004'
+          ? 'Gulf of Kutch Crude Tanker Discharging Slick'
+          : (spillId === 'OCN-043' || spillId.includes('043') ? 'Offshore Mumbai Basin (Single Point-Source)' : 'Offshore Mumbai Basin (Dual Coalesced)'));
+        const locationStr = raw.spill_event?.location_name || (spillId === 'SPILL_002' ? 'Coromandel Coast, Chennai' : spillId === 'SPILL_003' ? 'Malabar Coast, Kochi' : spillId === 'SPILL_004' ? 'Gulf of Kutch Maritime Zone' : 'Offshore Mumbai Basin, Arabian Sea');
+
         const incident: Incident = {
           id: raw.spill_event?.spill_id || spillId,
           code: raw.spill_event?.spill_id || spillId,
-          name: raw.spill_event?.location_name || (spillId === 'SPILL_002'
-            ? 'Chennai Port Cargo Bunker Leak'
-            : spillId === 'SPILL_003'
-            ? 'Kochi Malabar Coast Seep'
-            : (spillId === 'OCN-043' || spillId.includes('043') ? 'Offshore Mumbai Basin (Single Point-Source)' : 'Offshore Mumbai Basin (Dual Coalesced)')),
-          locationName: raw.spill_event?.location_name || (spillId === 'SPILL_002' ? 'Coromandel Coast, Chennai' : spillId === 'SPILL_003' ? 'Malabar Coast, Kochi' : 'Offshore Mumbai Basin, Arabian Sea'),
+          name: incidentName,
+          locationName: locationStr,
           coordinates: [cLat, cLon],
           detectedAt: raw.spill_event?.timestamp || '2026-09-07T04:32:00Z',
           estimatedAgeHours: `${raw.spill_event?.estimated_age_hours || 5.5} hours`,

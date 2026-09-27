@@ -167,21 +167,23 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
   const handleOpenDigitalTwin = () => {
     if (onSpillDetected && realResult?.status !== 'clean_ocean' && !isCleanOcean) {
       const dynamicSpillId = realResult?.spill_id || 'OCN-043';
+      const resolvedLoc = realResult?.location || (realResult?.scenario?.spill_event?.location_name) || 'Offshore Sector';
+      const resolvedClassification = realResult?.classification || (isDual ? 'Dual-Source Petroleum Coalescence (2 Ships Merged)' : 'Single Point-Source Petroleum Slick (1 Ship)');
+      const centLat = Number(realResult?.scenario?.spill_event?.centroid?.lat ?? (manualCoordMode ? customLat : (incident.coordinates[0] || 18.12)));
+      const centLon = Number(realResult?.scenario?.spill_event?.centroid?.lon ?? (manualCoordMode ? customLon : (incident.coordinates[1] || 72.45)));
+
       const customInc: Incident = {
         id: dynamicSpillId,
         code: dynamicSpillId,
-        name: realResult?.location || 'Offshore Mumbai Basin (Single Point-Source)',
-        locationName: realResult?.location || 'Offshore Mumbai Basin, Arabian Sea',
-        coordinates: [
-          Number(realResult?.scenario?.spill_event?.centroid?.lat || incident.coordinates[0] || 18.12),
-          Number(realResult?.scenario?.spill_event?.centroid?.lon || incident.coordinates[1] || 72.45)
-        ],
-        detectedAt: realResult?.scenario?.spill_event?.timestamp || '2026-09-07T04:32:00Z',
+        name: `${resolvedClassification} - ${resolvedLoc}`,
+        locationName: resolvedLoc,
+        coordinates: [centLat, centLon],
+        detectedAt: realResult?.scenario?.spill_event?.timestamp || new Date().toISOString(),
         estimatedAgeHours: '5.5 hours',
-        slickAreaKm2: Number(realResult?.area_km2 || 8.25),
+        slickAreaKm2: Number(realResult?.area_km2 || (isDual ? 13.48 : 8.25)),
         slickPerimeterKm: Math.round(Math.sqrt(Number(realResult?.area_km2 || 8.25)) * 8.5 * 10) / 10,
         confidencePercent: Math.round((realResult?.unet_analysis?.confidence || 0.958) * 100),
-        classification: 'Single Point-Source Petroleum (1 Ship)',
+        classification: resolvedClassification,
         sensor: 'Sentinel-1 / ALOS PALSAR C/L-Band SAR',
         status: 'UNDER INVESTIGATION',
         priority: 'HIGH',
