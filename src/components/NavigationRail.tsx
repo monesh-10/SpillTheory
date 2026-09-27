@@ -105,10 +105,10 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
 }) => {
   return (
     <aside
-      className="w-[60px] bg-[#050B14] border-r border-[#162D4A] flex flex-col justify-between select-none z-20 shrink-0 h-full py-2.5 transition-colors duration-200"
+      className="w-14 bg-slate-950 border-r border-slate-800/80 flex flex-col justify-between select-none z-20 shrink-0 h-full py-3 transition-colors duration-200"
     >
       {/* Tactical Nav Button Items */}
-      <div className="flex flex-col items-center space-y-1 w-full">
+      <div className="flex flex-col items-center space-y-1.5 w-full px-1.5">
         {TACTICAL_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.activeMatches.includes(currentPage);
@@ -118,22 +118,14 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
               key={item.id}
               onClick={() => onNavigate(item.id)}
               title={item.label}
-              className={`w-full py-2 px-1 flex flex-col items-center justify-center transition-all duration-150 relative cursor-pointer group ${
+              className={`w-full py-2 px-1 rounded-lg flex flex-col items-center justify-center transition-all duration-150 cursor-pointer ${
                 isActive
-                  ? 'text-[#00E5FF] bg-[#00E5FF]/10 border-l-2 border-[#00E5FF] shadow-[inset_0_0_12px_rgba(0,229,255,0.1)]'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#070F1D]'
+                  ? 'text-cyan-400 bg-cyan-500/10 font-medium'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
               }`}
             >
-              <Icon
-                className={`w-5 h-5 transition-transform duration-150 group-hover:scale-105 ${
-                  isActive ? 'text-[#00E5FF] drop-shadow-[0_0_6px_rgba(0,229,255,0.5)]' : 'text-slate-400'
-                }`}
-              />
-              <span
-                className={`text-[9.5px] font-sans tracking-wide mt-1 transition-colors ${
-                  isActive ? 'text-[#00E5FF] font-semibold' : 'text-slate-400'
-                }`}
-              >
+              <Icon className="w-4 h-4 mb-0.5" />
+              <span className="text-[9px] tracking-tight leading-tight">
                 {item.label}
               </span>
             </button>
@@ -142,10 +134,10 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
       </div>
 
       {/* Bottom Status: System Online */}
-      <div className="flex flex-col items-center justify-center pt-2 pb-1 border-t border-[#162D4A]/60 text-center px-1">
-        <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse mb-1" />
-        <span className="text-[9px] font-sans text-slate-400 font-medium leading-tight">
-          System<br />Online
+      <div className="flex flex-col items-center justify-center pt-2 pb-1 border-t border-slate-800/60 text-center px-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mb-1" />
+        <span className="text-[9px] text-slate-500 font-mono leading-tight">
+          LIVE
         </span>
       </div>
     </aside>

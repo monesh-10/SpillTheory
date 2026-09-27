@@ -55,7 +55,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
           <div className="flex items-center gap-2">
             <a
-              href="http://127.0.0.1:8000/api/scenario/SPILL_001/export-pdf"
+              href={`${(import.meta as any).env?.VITE_API_URL || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://127.0.0.1:8000' : '')}/api/scenario/${incident.id || 'OCN-042'}/export-pdf`}
               target="_blank"
               rel="noreferrer"
               className="px-3.5 py-1.5 rounded-md bg-[#6D8196] hover:bg-[#586A7D] text-[#FFFFE3] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors shadow-xs"

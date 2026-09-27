@@ -3,7 +3,7 @@ warnings.filterwarnings('ignore')
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from backend.pdf_report import generate_forensic_dossier_pdf
 from backend.metocean import fetch_live_metocean, generate_live_drift_forecast
@@ -15,6 +15,7 @@ from backend.backtracking.particle_backtracking import (
     compute_cloud_centroid
 )
 from backend.eo_router import router as eo_router
+from backend.ais_service import get_all_live_ais_vessels
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -75,8 +76,9 @@ from backend.scenario_builder import (
     build_and_register_spill_scenario,
 )
 
-@app.get("/")
 @app.get("/api")
+@app.get("/api/health")
+@app.get("/health")
 def root_endpoint():
     """Root health and discovery endpoint for the SpillTheory 4D Digital Twin API."""
     return {
@@ -145,6 +147,26 @@ def get_ais_vessels_endpoint(
         prefer_live=prefer_live
     )
 
+@app.get("/api/ais/live")
+def get_live_ais_feed(limit: int = 80):
+    """
+    Fetches real-time live AIS broadcasts from Digitraffic open API.
+    Returns real commercial vessels with live coordinates, speed, heading, and identity.
+    """
+    return {"status": "success", "vessels": get_all_live_ais_vessels(limit=limit)}
+
+@app.get("/api/location")
+def get_location_endpoint(lat: float = 18.112, lon: float = 72.464):
+    """
+    Resolves real authoritative maritime geography and zone name using free APIs.
+    """
+    return {
+        "status": "success",
+        "latitude": lat,
+        "longitude": lon,
+        "location": get_location_name(lat, lon)
+    }
+
 @app.get("/api/scenario/{spill_id}")
 def get_scenario(spill_id: str):
     if spill_id in CUSTOM_SCENARIOS:
@@ -174,7 +196,16 @@ def get_scenario(spill_id: str):
 
     # Inject live MetOcean telemetry and real-time Lagrangian drift forecast (+48 hours)
     try:
-        spill_time = data.get("spill_event", {}).get("timestamp", "2026-09-07T04:32:00Z")
+        now_utc = datetime.now(timezone.utc)
+        spill_time = data.get("spill_event", {}).get("timestamp")
+        if not spill_time or "2026-09-07" in spill_time or "2025" in str(spill_time):
+            spill_time = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
+            data["spill_event"]["timestamp"] = spill_time
+
+        c_lat = float(data.get("spill_event", {}).get("centroid", {}).get("lat", 18.112))
+        c_lon = float(data.get("spill_event", {}).get("centroid", {}).get("lon", 72.464))
+        data["spill_event"]["location_name"] = get_location_name(c_lat, c_lon)
+
         start_time = spill_time
         try:
             track_times = []
@@ -188,8 +219,6 @@ def get_scenario(spill_id: str):
         except Exception:
             start_time = spill_time
 
-        c_lat = float(data.get("spill_event", {}).get("centroid", {}).get("lat", 18.112))
-        c_lon = float(data.get("spill_event", {}).get("centroid", {}).get("lon", 72.464))
         metocean = fetch_live_metocean(c_lat, c_lon, start_time_iso=start_time, duration_hours=48)
         data["live_metocean"] = metocean
         
@@ -411,7 +440,7 @@ async def detect_sar(
                 }),
                 "max_probability": round(float(res.get("probability_map", clean_mask).max()), 3),
                 "location": loc_str,
-                "image_url": f"http://localhost:8000/demo_data/{saved_sar_name}",
+                "image_url": f"/demo_data/{saved_sar_name}",
                 "message": "Clean Ocean Benchmark Passed: U-Net model accurately predicted 0.00% spill coverage (Zero False Positive). Ocean surface verified clean.",
                 "reasoning_agent_report": "Reasoning Agent Evaluation: Radar backscatter across the SAR scene shows undisturbed sea clutter Bragg scattering with no capillary wave suppression. No anomalous dark radar patches were detected. Confirms 0% false alarm rate on clean waters."
             }
@@ -457,8 +486,8 @@ async def detect_sar(
             confidence=0.958,
             num_sources=num_sources,
             source_peaks=source_peaks,
-            image_url=f"http://localhost:8000/demo_data/{saved_sar_name}",
-            mask_url=f"http://localhost:8000/demo_data/{mask_filename}",
+            image_url=f"/demo_data/{saved_sar_name}",
+            mask_url=f"/demo_data/{mask_filename}",
             sensor_name="Sentinel-1 / ALOS PALSAR C/L-Band SAR",
             resolution_str="12.5m pixel spacing",
             detection_reason=f"U-Net deep segmentation detected a single isolated point-source discharge covering {calculated_area_km2} km².",
@@ -515,5 +544,28 @@ def get_backtracking_benchmark(true_age_hours: float = 24.0, lat: float = 18.12,
         return report
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------------------------------------------------
+# Production SPA Frontend Serving (Fullstack Cloud Hosting)
+# -------------------------------------------------------------
+DIST_DIR = ROOT / "dist"
+if (DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="spa_assets")
+
+@app.get("/{full_path:path}")
+async def serve_spa_frontend(full_path: str):
+    # Pass through API requests or static demo assets
+    if full_path.startswith("api") or full_path.startswith("demo_data") or full_path.startswith("data"):
+        raise HTTPException(status_code=404, detail="Resource not found")
+    if DIST_DIR.exists():
+        target = DIST_DIR / full_path
+        if target.is_file():
+            return FileResponse(target)
+        index_file = DIST_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+    return {"message": "SpillTheory API is online. Frontend build not found in /dist."}
+
 
 

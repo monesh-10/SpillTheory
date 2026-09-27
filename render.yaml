@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: spilltheory
+    env: docker
+    plan: standard
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0

@@ -19,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { SARDetectionResult, Incident } from '../types';
-import { apiService } from '../services/api';
+import { apiService, BACKEND_URL } from '../services/api';
 import { PRIMARY_INCIDENT, SINGLE_SPILL_INCIDENT } from '../data/mockData';
 
 interface SpillDetectionViewProps {
@@ -154,12 +154,12 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     ? (isCleanOcean ? 1.0 : Math.round((realResult.unet_analysis?.confidence || 0.958) * 100))
     : 95.8;
   const areaValue = realResult
-    ? (isCleanOcean ? 0.0 : (realResult.area_km2 ?? 8.25))
-    : 8.25;
-  const sarImageUrl = uploadedPreviewUrl || `http://localhost:8000/demo_data/${selectedDemoTile}`;
+    ? (isCleanOcean ? 0.0 : (realResult.area_km2 ?? (isDual ? 13.48 : 8.25)))
+    : (isDual ? 13.48 : 8.25);
+  const sarImageUrl = uploadedPreviewUrl || `${BACKEND_URL}/demo_data/${selectedDemoTile}`;
   const maskImageUrl = realResult?.sar_metadata?.mask_url
     ? `${realResult.sar_metadata.mask_url}?t=${lastInferenceTimestamp}`
-    : (isCleanOcean ? null : (uploadedFile ? null : `http://localhost:8000/demo_data/_latest_mask.png`));
+    : (isCleanOcean ? null : (uploadedFile ? null : `${BACKEND_URL}/demo_data/_latest_mask.png`));
 
   const handleOpenDigitalTwin = () => {
     if (onSpillDetected && realResult?.status !== 'clean_ocean' && !isCleanOcean) {

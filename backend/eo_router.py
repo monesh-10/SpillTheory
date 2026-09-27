@@ -128,8 +128,8 @@ async def detect_eo(
         save_prediction_png(result["prediction_map"], pred_path)
         save_confidence_png(result["confidence_map"], conf_path)
 
-        prediction_url = f"http://localhost:8000/data/outputs/{pred_filename}"
-        confidence_url = f"http://localhost:8000/data/outputs/{conf_filename}"
+        prediction_url = f"/data/outputs/{pred_filename}"
+        confidence_url = f"/data/outputs/{conf_filename}"
 
         # ------------------------------------------------------------------
         # 6. Extract oil spill class (Class 5 = "Oil Spill")
@@ -142,7 +142,7 @@ async def detect_eo(
         mask_filename = f"_mask_{new_spill_id}.png"
         mask_uint8 = (oil_mask * 255).astype(np.uint8)
         Image.fromarray(mask_uint8).save(_OUTPUTS_DIR / mask_filename)
-        mask_url = f"http://localhost:8000/data/outputs/{mask_filename}"
+        mask_url = f"/data/outputs/{mask_filename}"
 
         # ------------------------------------------------------------------
         # 7. Unified Post-Detection Digital Twin Workflow (matches SAR)

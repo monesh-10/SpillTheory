@@ -223,24 +223,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Inspector Content Component for reuse in split view and slide-over
   const renderInspector = () => (
-    <aside className="h-full bg-[#070F1D] border-l border-[#162D4A] flex flex-col shrink-0 overflow-hidden shadow-2xl transition-all duration-200">
+    <aside className="h-full bg-slate-950 border-l border-slate-800/80 flex flex-col shrink-0 overflow-hidden transition-all duration-200">
       {/* Segmented Tab Bar */}
-      <div className="p-2 border-b border-[#162D4A] bg-[#050B14] flex items-center justify-between gap-1.5 shrink-0">
+      <div className="p-2 border-b border-slate-800/80 bg-slate-950 flex items-center justify-between gap-1 shrink-0">
         <div className="flex items-center gap-1 flex-1">
           <button
             onClick={() => setActiveInspectorTab('attribution')}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeInspectorTab === 'attribution'
-                ? 'bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/40 shadow-[0_0_10px_rgba(0,229,255,0.2)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1B2C]'
+                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
             }`}
           >
             <Ship className="w-3.5 h-3.5" />
             <span>Attribution</span>
-            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+            <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
               activeInspectorTab === 'attribution'
-                ? 'bg-[#00E5FF] text-[#050B14]'
-                : 'bg-[#0B1523] text-slate-400 border border-[#162D4A]'
+                ? 'bg-cyan-500/20 text-cyan-300'
+                : 'bg-slate-900 text-slate-500'
             }`}>
               {activeVessel.attributionScore}%
             </span>
@@ -248,10 +248,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => setActiveInspectorTab('environment')}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeInspectorTab === 'environment'
-                ? 'bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/40 shadow-[0_0_10px_rgba(0,229,255,0.2)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1B2C]'
+                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
             }`}
           >
             <Waves className="w-3.5 h-3.5" />
@@ -260,10 +260,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => setActiveInspectorTab('detection')}
-            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeInspectorTab === 'detection'
-                ? 'bg-[#00E5FF]/15 text-[#00E5FF] border border-[#00E5FF]/40 shadow-[0_0_10px_rgba(0,229,255,0.2)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-[#0E1B2C]'
+                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
             }`}
           >
             <Satellite className="w-3.5 h-3.5" />
@@ -274,7 +274,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {layoutMode === 'map' && (
           <button
             onClick={() => setInspectorOpen(false)}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-[#0E1B2C] cursor-pointer"
+            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-900 cursor-pointer"
             title="Close Panel"
           >
             <X className="w-4 h-4" />
@@ -283,19 +283,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Tab Content Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
         {/* TAB 1: ATTRIBUTION FORENSICS */}
         {activeInspectorTab === 'attribution' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="space-y-3 animate-in fade-in duration-150">
             {/* Suspect Vessel Scenario Switcher (Dual vs Single) */}
             {isDualSpillScenario && vessels.length >= 2 && (
-              <div className="p-3 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-2 shadow-lg">
-                <div className="flex items-center justify-between text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-cyan-400">
-                    <span className="w-2 h-2 rounded-full bg-[#00E5FF] animate-pulse" />
-                    DUAL-SOURCE SUSPECTS (2 SHIPS)
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    Dual-Source Suspects (2 Ships)
                   </span>
-                  <span className="font-mono text-slate-400">SELECT TO INSPECT</span>
+                  <span className="font-mono text-slate-500 text-[9px]">Select to inspect</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -303,53 +303,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     onClick={() => onSelectVessel(vessels[0])}
                     className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                       activeVessel.id === vessels[0]?.id
-                        ? 'bg-[#2A0E13] border-[#EF4444] shadow-[0_0_10px_rgba(239,68,68,0.3)]'
-                        : 'bg-[#070F1D] border-[#162D4A] hover:border-red-500/50'
+                        ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#EF4444] font-mono">#1 PLUME 1</span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-red-950/80 text-red-300 border border-red-500/40">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="font-semibold text-rose-400">Plume #1</span>
+                      <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-bold">
                         {vessels[0]?.attributionScore || 78.2}%
                       </span>
                     </div>
-                    <div className="font-bold text-xs text-white truncate mt-1">{vessels[0]?.name || 'Suspect #1'}</div>
-                    <div className="text-[9.5px] text-slate-400 font-mono">Origin 1 · 02:47 UTC</div>
+                    <div className="font-semibold text-xs text-white truncate mt-1">{vessels[0]?.name || 'Suspect #1'}</div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-0.5">02:47 UTC</div>
                   </button>
 
                   <button
                     onClick={() => onSelectVessel(vessels[1])}
                     className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
                       activeVessel.id === vessels[1]?.id
-                        ? 'bg-[#1F1338] border-[#C084FC] shadow-[0_0_10px_rgba(192,132,252,0.3)]'
-                        : 'bg-[#070F1D] border-[#162D4A] hover:border-purple-500/50'
+                        ? 'bg-purple-500/10 border-purple-500/40 text-purple-300'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-300'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-[#C084FC] font-mono">#2 PLUME 2</span>
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="font-semibold text-purple-400">Plume #2</span>
+                      <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold">
                         {vessels[1]?.attributionScore || 76.4}%
                       </span>
                     </div>
-                    <div className="font-bold text-xs text-white truncate mt-1">{vessels[1]?.name || 'Suspect #2'}</div>
-                    <div className="text-[9.5px] text-slate-400 font-mono">Origin 2 · 02:35 UTC</div>
+                    <div className="font-semibold text-xs text-white truncate mt-1">{vessels[1]?.name || 'Suspect #2'}</div>
+                    <div className="text-[9px] text-slate-500 font-mono mt-0.5">02:35 UTC</div>
                   </button>
                 </div>
 
-                <div className="text-[10px] text-slate-400 bg-[#070F1D] p-2 rounded-lg border border-[#162D4A] flex items-center gap-1.5">
-                  <span className="text-cyan-400 font-bold">ℹ️ Spatial Deconvolution:</span>
-                  <span>Both vessels discharged along independent tracks and merged at t=0.</span>
+                <div className="text-[10px] text-slate-400 bg-slate-950/80 p-2 rounded-lg border border-slate-800/80 flex items-center gap-1.5">
+                  <span className="text-cyan-400 font-medium">Spatial Deconvolution:</span>
+                  <span>Both vessels discharged along independent tracks and coalesced.</span>
                 </div>
               </div>
             )}
 
             {/* Active Vessel Identity Card */}
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-bold text-sm tracking-wide text-white uppercase">{activeVessel.name}</h3>
-                  <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                    <span className="text-cyan-400 font-semibold">{activeVessel.type}</span>
+                  <h3 className="font-semibold text-sm text-white">{activeVessel.name}</h3>
+                  <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                    <span className="text-cyan-400">{activeVessel.type}</span>
                     <span>·</span>
                     <span className="font-mono">IMO {activeVessel.imo}</span>
                     <span>·</span>
@@ -357,133 +357,125 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
 
-                <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase ${
+                <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-medium uppercase ${
                   activeVessel.rank === 1
-                    ? 'bg-[#2A0E13] text-[#EF4444] border border-[#EF4444]/40 shadow-[0_0_8px_rgba(239,68,68,0.3)]'
-                    : 'bg-[#072533] text-[#00E5FF] border border-[#00E5FF]/40'
+                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                    : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
                 }`}>
-                  {activeVessel.investigationPriority} PRIORITY
+                  {activeVessel.investigationPriority} Priority
                 </span>
               </div>
 
               {/* Commercial Maritime Vessel Photo */}
-              <div className="relative w-full h-32 rounded-lg overflow-hidden border border-[#162D4A] bg-[#070F1D] group">
+              <div className="relative w-full h-28 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 group">
                 <img 
                   src={getVesselPhotoUrl(activeVessel.type, activeVessel.name)} 
                   alt={activeVessel.name}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80';
                   }}
-                  className="w-full h-full object-cover contrast-110 saturate-105 group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover contrast-105 saturate-100 group-hover:scale-102 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1523] via-transparent to-transparent" />
-                <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[10px] font-mono">
-                  <span className="bg-[#070F1D]/90 px-2 py-0.5 rounded border border-[#162D4A] text-slate-300 font-semibold">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] font-mono">
+                  <span className="bg-slate-950/80 px-2 py-0.5 rounded text-slate-300">
                     MMSI: {activeVessel.mmsi}
                   </span>
-                  <span className="bg-[#00E5FF]/20 text-[#00E5FF] px-2 py-0.5 rounded border border-[#00E5FF]/40 font-bold flex items-center gap-1 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] animate-ping" />
-                    SAR CO-LOCATED
+                  <span className="bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30 font-medium">
+                    Co-Located
                   </span>
                 </div>
               </div>
 
               {/* Vessel Telemetry 2x2 grid */}
-              <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Current Pos</span>
-                  <span className="font-mono text-cyan-400 font-semibold text-[11px] tabular-nums">
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Current Pos</span>
+                  <span className="font-mono text-slate-200 font-medium text-[11px] tabular-nums">
                     {activeVessel.currentCoordinates[0]}°N, {activeVessel.currentCoordinates[1]}°E
                   </span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Speed & Heading</span>
-                  <span className="font-mono text-slate-200 font-semibold text-[11px] tabular-nums">
-                    {activeVessel.currentSpeedKt} kn @ {activeVessel.currentHeadingDeg}°
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Speed & Heading</span>
+                  <span className="font-mono text-slate-200 font-medium text-[11px] tabular-nums">
+                    {activeVessel.currentSpeedKt} kn · {activeVessel.currentHeadingDeg}°
                   </span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Distance to Origin</span>
-                  <span className="font-mono text-emerald-400 font-semibold text-[11px] tabular-nums">
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Distance to Origin</span>
+                  <span className="font-mono text-emerald-400 font-medium text-[11px] tabular-nums">
                     {activeVessel.distanceFromOriginKm} km
                   </span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Destination</span>
-                  <span className="text-slate-200 text-[11px] truncate block font-medium">
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Destination</span>
+                  <span className="text-slate-300 text-[11px] truncate block font-medium">
                     {activeVessel.destination}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Composite Attribution Ranking Score with 5 Distinct Colored Bars */}
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
+            {/* Composite Attribution Ranking Score */}
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  FORENSIC ATTRIBUTION SCORE
+                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                  Attribution Score
                 </span>
-                <span className="text-3xl font-bold font-mono text-[#00E5FF] drop-shadow-[0_0_8px_rgba(0,229,255,0.4)]">
+                <span className="text-2xl font-bold font-mono text-cyan-400">
                   {activeVessel.attributionScore}%
                 </span>
               </div>
 
-              {/* Evidence Breakdown Bars with EXACT Colors */}
-              <div className="space-y-3 pt-1">
+              {/* Evidence Breakdown Bars */}
+              <div className="space-y-2 pt-1">
                 {[
-                  { label: 'Origin Proximity', score: activeVessel.proximityScore, barColor: 'bg-[#10B981]', dotColor: 'bg-[#10B981]' },
-                  { label: 'Trajectory Alignment', score: activeVessel.trajectoryScore, barColor: 'bg-[#00E5FF]', dotColor: 'bg-[#00E5FF]' },
-                  { label: 'Temporal Discharge Window', score: activeVessel.temporalScore, barColor: 'bg-[#3B82F6]', dotColor: 'bg-[#3B82F6]' },
-                  { label: 'AIS Continuity & Beacon Rate', score: activeVessel.aisAnomalyScore, barColor: 'bg-[#F59E0B]', dotColor: 'bg-[#F59E0B]' },
-                  { label: 'Speed Drop & Course Deviation', score: activeVessel.behavioralAnomalyScore, barColor: 'bg-[#EF4444]', dotColor: 'bg-[#EF4444]' }
+                  { label: 'Origin Proximity', score: activeVessel.proximityScore, barColor: 'bg-emerald-400' },
+                  { label: 'Trajectory Alignment', score: activeVessel.trajectoryScore, barColor: 'bg-cyan-400' },
+                  { label: 'Discharge Window Sync', score: activeVessel.temporalScore, barColor: 'bg-blue-400' },
+                  { label: 'AIS Continuity', score: activeVessel.aisAnomalyScore, barColor: 'bg-amber-400' },
+                  { label: 'Speed Drop Anomaly', score: activeVessel.behavioralAnomalyScore, barColor: 'bg-rose-400' }
                 ].map(ev => (
                   <div key={ev.label} className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-slate-300 flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${ev.dotColor}`} />
-                        {ev.label}
-                      </span>
-                      <span className="text-slate-100 font-mono tabular-nums font-bold">{ev.score}%</span>
+                      <span className="text-slate-400">{ev.label}</span>
+                      <span className="text-slate-200 font-mono tabular-nums font-semibold">{ev.score}%</span>
                     </div>
-                    <div className="w-full bg-[#070F1D] h-2 rounded-full overflow-hidden border border-[#162D4A]">
+                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/80">
                       <div
-                        className={`h-full ${ev.barColor} rounded-full transition-all duration-500 shadow-sm`}
+                        className={`h-full ${ev.barColor} rounded-full transition-all duration-500`}
                         style={{ width: `${ev.score}%` }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
-
-              <p className="text-[10px] text-slate-500 italic pt-1 border-t border-[#162D4A] leading-tight">
-                Attribution score provides forensic decision-support for maritime inspectors, not legal proof of guilt.
-              </p>
             </div>
 
             {/* Reconstructed Vessel Activity Timeline */}
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-400 uppercase tracking-wider">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-slate-200">ACTIVITY CHRONOLOGY</span>
+                  <span className="text-slate-200">Activity Chronology</span>
                 </div>
-                <span className="text-[10px] font-mono text-cyan-400/80">UTC TIMELINE</span>
+                <span className="text-[10px] font-mono text-slate-500">UTC</span>
               </div>
 
-              <div className="relative pl-3 border-l border-[#162D4A] space-y-3 py-1">
+              <div className="relative pl-3 border-l border-slate-800 space-y-2.5 py-1">
                 {activeVessel.activityTimeline.map((item, index) => (
-                  <div key={index} className="relative group">
+                  <div key={index} className="relative">
                     <div
-                      className={`absolute -left-[17px] top-1 w-2 h-2 rounded-full border ${
+                      className={`absolute -left-[17px] top-1 w-2 h-2 rounded-full ${
                         item.isAnomaly
-                          ? 'bg-[#EF4444] border-[#EF4444] shadow-[0_0_6px_#EF4444]'
+                          ? 'bg-rose-400'
                           : index === 0
-                          ? 'bg-[#10B981] border-[#10B981]'
-                          : 'bg-[#00E5FF] border-[#00E5FF]'
+                          ? 'bg-emerald-400'
+                          : 'bg-cyan-400'
                       }`}
                     />
-                    <div className="text-[10px] text-slate-400 font-mono font-medium">{item.timestampUtc}</div>
-                    <div className={`text-[11px] mt-0.5 leading-snug ${item.isAnomaly ? 'text-red-400 font-medium' : 'text-slate-200'}`}>
+                    <div className="text-[10px] text-slate-500 font-mono">{item.timestampUtc}</div>
+                    <div className={`text-[11px] mt-0.5 leading-snug ${item.isAnomaly ? 'text-rose-400 font-medium' : 'text-slate-300'}`}>
                       {item.description}
                     </div>
                   </div>
@@ -492,21 +484,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* Compact Candidate Vessels in Sector */}
-            <div className="space-y-2 pt-1">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                OTHER CANDIDATE VESSELS IN SECTOR
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                Other Candidate Vessels
               </div>
               {vessels.filter(v => v.id !== activeVessel.id).slice(0, 2).map(other => (
                 <button
                   key={other.id}
                   onClick={() => onSelectVessel(other)}
-                  className="w-full text-left p-2.5 rounded-lg bg-[#0B1523] hover:bg-[#0E1B2C] border border-[#162D4A] hover:border-[#00E5FF]/40 flex items-center justify-between text-xs transition-colors cursor-pointer shadow-xs"
+                  className="w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 flex items-center justify-between text-xs transition-colors cursor-pointer"
                 >
                   <div>
-                    <span className="font-semibold text-slate-200">{other.name}</span>
-                    <span className="text-[10px] text-slate-400 block">{other.type} · Dist: {other.distanceFromOriginKm} km</span>
+                    <span className="font-medium text-slate-200">{other.name}</span>
+                    <span className="text-[10px] text-slate-500 block">{other.type} · {other.distanceFromOriginKm} km</span>
                   </div>
-                  <span className="text-xs font-mono font-bold text-slate-400">
+                  <span className="text-xs font-mono font-medium text-slate-400">
                     {other.attributionScore}%
                   </span>
                 </button>
@@ -514,13 +506,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* Primary Action Button */}
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 onClick={() => onNavigate('reports')}
-                className="w-full py-2.5 px-4 rounded-lg bg-[#00E5FF] hover:bg-[#33EAFF] text-[#050B14] text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(0,229,255,0.35)] active:scale-95 cursor-pointer"
+                className="w-full py-2 px-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <FileText className="w-4 h-4 text-[#050B14]" />
-                <span>GENERATE INVESTIGATION DOSSIER</span>
+                <FileText className="w-3.5 h-3.5 text-slate-950" />
+                <span>Export Investigation Dossier</span>
               </button>
             </div>
           </div>
@@ -530,60 +522,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {activeInspectorTab === 'environment' && (
           <div className="space-y-4 animate-in fade-in duration-150">
             {/* MetOcean Forcing Cards */}
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
-              <div className="flex items-center justify-between border-b border-[#162D4A] pb-2">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">LAGRANGIAN 4D FORCING</span>
-                <span className="text-[10px] font-mono text-cyan-400 font-semibold">ECMWF / HYCOM</span>
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Live MetOcean Telemetry</span>
+                <span className="text-[10px] font-mono text-cyan-400">Open-Meteo GFS</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 text-[11px]">
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Wind (10m)</span>
-                  <span className="font-mono font-bold text-white text-sm">{metocean.windSpeedKt} kt</span>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Wind (10m)</span>
+                  <span className="font-mono font-semibold text-white text-sm">{metocean.windSpeedKt} kt</span>
                   <span className="text-cyan-400 text-[10px] ml-1">{metocean.windDirectionCard}</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Surface Current</span>
-                  <span className="font-mono font-bold text-white text-sm">{metocean.currentSpeedKt} kt</span>
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Surface Current</span>
+                  <span className="font-mono font-semibold text-white text-sm">{metocean.currentSpeedKt} kt</span>
                   <span className="text-cyan-400 text-[10px] ml-1">{metocean.currentDirectionCard}</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Wave Swell</span>
-                  <span className="font-mono font-bold text-white text-sm">{metocean.waveHeightM} m</span>
-                  <span className="text-slate-400 text-[10px] ml-1">Moderate</span>
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Wave Height</span>
+                  <span className="font-mono font-semibold text-white text-sm">{metocean.waveHeightM} m</span>
+                  <span className="text-slate-400 text-[10px] ml-1">Swell</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-[#070F1D] border border-[#162D4A]">
-                  <span className="text-[10px] text-slate-400 block">Net Advection</span>
-                  <span className="font-mono font-bold text-emerald-400 text-sm">{metocean.netDriftSpeedKt} kt</span>
-                  <span className="text-slate-400 text-[10px] ml-1">@ 130°</span>
+                <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block">Net Drift</span>
+                  <span className="font-mono font-semibold text-emerald-400 text-sm">{metocean.netDriftSpeedKt} kt</span>
+                  <span className="text-slate-400 text-[10px] ml-1">Lagrangian</span>
                 </div>
               </div>
             </div>
 
             {/* Shoreline Impact & Asset Risk */}
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
-              <div className="flex items-center justify-between border-b border-[#162D4A] pb-2">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">SHORELINE IMPACT FORECAST</span>
-                <span className="text-[10px] font-mono text-amber-400 px-1.5 py-0.5 rounded bg-amber-950/40 border border-amber-500/40 font-bold">
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Shoreline Impact Risk</span>
+                <span className="text-[10px] font-mono text-amber-400 px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 font-semibold">
                   ETA ~{shorelineRisk.projectedEtaHours}h
                 </span>
               </div>
 
               <div>
-                <div className="font-semibold text-white text-xs leading-snug">{shorelineRisk.name}</div>
-                <div className="text-[11px] text-slate-400 mt-1">
-                  Distance Offshore: <span className="font-mono text-white font-medium">{shorelineRisk.distanceOffshoreKm} km</span> · Vuln Index: <span className="font-mono text-amber-400 font-bold">EVT {shorelineRisk.vulnerabilityIndex}/10</span>
+                <div className="font-semibold text-white text-xs">{shorelineRisk.name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  Distance: <span className="font-mono text-white">{shorelineRisk.distanceOffshoreKm} km</span> · Vulnerability: <span className="font-mono text-amber-400 font-semibold">EVT {shorelineRisk.vulnerabilityIndex}/10</span>
                 </div>
               </div>
 
               {/* Checklist */}
-              <div className="space-y-2 pt-2 border-t border-[#162D4A]">
-                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Operational Response Checklist:</div>
+              <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Response Checklist:</div>
                 {actions.map(act => (
                   <div
                     key={act.id}
                     onClick={() => toggleAction(act.id)}
-                    className="flex items-start gap-2.5 cursor-pointer text-[11px] text-slate-300 hover:text-white transition-colors"
+                    className="flex items-start gap-2 cursor-pointer text-[11px] text-slate-300 hover:text-white transition-colors"
                   >
                     <div className="mt-0.5 shrink-0">
                       {act.completed ? (
@@ -604,39 +596,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* TAB 3: SAR DETECTION TELEMETRY */}
         {activeInspectorTab === 'detection' && (
-          <div className="space-y-4 animate-in fade-in duration-150">
-            <div className="p-4 rounded-xl bg-[#0B1523] border border-[#162D4A] space-y-3 shadow-lg">
-              <div className="flex items-center justify-between border-b border-[#162D4A] pb-2">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">SAR RADAR CHARACTERIZATION</span>
-                <span className="text-[10px] text-emerald-400 font-mono font-bold">94.7% IoU</span>
+          <div className="space-y-3 animate-in fade-in duration-150">
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">SAR Segmentation</span>
+                <span className="text-[10px] text-emerald-400 font-mono font-semibold">94.7% IoU</span>
               </div>
 
-              <div className="space-y-2 text-[11px]">
-                <div className="flex justify-between py-1 border-b border-[#162D4A]">
-                  <span className="text-slate-400">Centroid Coordinates:</span>
-                  <span className="font-mono text-cyan-400 tabular-nums font-medium">18.112°N, 72.464°E</span>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Centroid:</span>
+                  <span className="font-mono text-cyan-400 tabular-nums">18.112°N, 72.464°E</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#162D4A]">
-                  <span className="text-slate-400">Calculated Slick Area:</span>
-                  <span className="font-mono text-red-400 tabular-nums font-bold">{incident.slickAreaKm2} km²</span>
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Slick Area:</span>
+                  <span className="font-mono text-rose-400 tabular-nums font-semibold">{incident.slickAreaKm2} km²</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#162D4A]">
-                  <span className="text-slate-400">Slick Perimeter:</span>
-                  <span className="font-mono text-slate-200 tabular-nums font-medium">{incident.slickPerimeterKm} km</span>
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Perimeter:</span>
+                  <span className="font-mono text-slate-200 tabular-nums">{incident.slickPerimeterKm} km</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-[#162D4A]">
-                  <span className="text-slate-400">Sensor Platform:</span>
-                  <span className="text-slate-200 font-medium">{incident.sensor}</span>
+                <div className="flex justify-between py-1 border-b border-slate-800/60">
+                  <span className="text-slate-400">Sensor:</span>
+                  <span className="text-slate-200">{incident.sensor}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Classification:</span>
-                  <span className="text-cyan-400 font-semibold">{incident.classification}</span>
+                  <span className="text-cyan-400 font-medium">{incident.classification}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setIsSARCompareModalOpen(true)}
-                className="w-full mt-2 py-2 px-3 rounded-lg bg-[#070F1D] hover:bg-[#0E1B2C] border border-[#162D4A] text-cyan-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                className="w-full mt-1 py-2 px-3 rounded-lg bg-slate-950 hover:bg-slate-900 border border-slate-800 text-cyan-400 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Compare SAR AI Mask</span>
@@ -657,23 +649,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Streamlined 4D Simulation Time Dock Component
   const renderTimeDock = () => (
-    <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-3xl bg-[#070F1D]/90 backdrop-blur-xl border border-[#162D4A] rounded-2xl p-3 shadow-2xl shadow-black/80 space-y-2">
+    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 shadow-xl space-y-2">
       {/* Compact Top Row: Play/Pause, Scrubber, Time Readout */}
-      <div className="flex items-center gap-3 text-xs">
+      <div className="flex items-center gap-2.5 text-xs">
         <button
           onClick={() => setIsPlaying(!isPlaying)}
-          className="w-8 h-8 rounded-full bg-[#00E5FF] hover:bg-[#33EAFF] text-[#050B14] flex items-center justify-center font-bold transition-all active:scale-95 shadow-[0_0_12px_rgba(0,229,255,0.45)] cursor-pointer shrink-0"
+          className="w-7 h-7 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center font-bold transition-all active:scale-95 shadow-xs cursor-pointer shrink-0"
           title={isPlaying ? 'Pause Simulation' : 'Play 4D Lagrangian Reconstruction (-5h to +48h)'}
         >
-          {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
+          {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
         </button>
 
         {/* Milestone Quick Jump Buttons */}
-        <div className="hidden sm:flex items-center gap-1 bg-[#050B14] p-0.5 rounded-lg border border-[#162D4A] text-[10px] font-mono">
+        <div className="hidden sm:flex items-center gap-1 bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 text-[10px] font-mono">
           <button
             onClick={() => setTimeOffsetMinutes(-300)}
             className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-              timeOffsetMinutes === -300 ? 'bg-amber-900/80 text-amber-300 font-bold border border-amber-400/50' : 'text-slate-400 hover:text-white'
+              timeOffsetMinutes === -300 ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-slate-400 hover:text-white'
             }`}
             title="Discharge Event (-5h)"
           >
@@ -682,7 +674,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             onClick={() => setTimeOffsetMinutes(0)}
             className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-              timeOffsetMinutes === 0 ? 'bg-cyan-900/80 text-cyan-300 font-bold border border-cyan-400/50' : 'text-slate-400 hover:text-white'
+              timeOffsetMinutes === 0 ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40' : 'text-slate-400 hover:text-white'
             }`}
             title="SAR Detection (NOW / T=0)"
           >
@@ -691,16 +683,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <button
             onClick={() => setTimeOffsetMinutes(1440)}
             className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-              timeOffsetMinutes >= 1400 && timeOffsetMinutes <= 1500 ? 'bg-emerald-900/80 text-emerald-300 font-bold border border-emerald-400/50' : 'text-slate-400 hover:text-white'
+              timeOffsetMinutes >= 1400 && timeOffsetMinutes <= 1500 ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40' : 'text-slate-400 hover:text-white'
             }`}
-            title="+24h Coastal Threat"
+            title="+24h Threat"
           >
             +24h
           </button>
           <button
             onClick={() => setTimeOffsetMinutes(2880)}
             className={`px-2 py-0.5 rounded transition-all cursor-pointer ${
-              timeOffsetMinutes >= 2800 ? 'bg-rose-900/80 text-rose-300 font-bold border border-rose-400/50' : 'text-slate-400 hover:text-white'
+              timeOffsetMinutes >= 2800 ? 'bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40' : 'text-slate-400 hover:text-white'
             }`}
             title="+48h Coastal Landfall"
           >
@@ -708,7 +700,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        {/* Range Scrubber with Ticks */}
+        {/* Range Scrubber */}
         <div className="flex-1 relative flex items-center">
           <input
             type="range"
@@ -717,29 +709,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             step="15"
             value={timeOffsetMinutes}
             onChange={(e) => setTimeOffsetMinutes(Number(e.target.value))}
-            className="w-full h-1.5 bg-[#162D4A] rounded-lg appearance-none cursor-pointer accent-[#00E5FF]"
-          />
-          {/* Tick at -300m */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-3 bg-amber-400 rounded-xs pointer-events-none shadow-[0_0_6px_#F59E0B] z-10"
-            style={{ left: `${((360 - 300) / (360 + 2880)) * 100}%` }}
-          />
-          {/* Tick at 0m */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-3.5 bg-cyan-400 rounded-xs pointer-events-none shadow-[0_0_8px_#00E5FF] z-10"
-            style={{ left: `${(360 / (360 + 2880)) * 100}%` }}
-          />
-          {/* Tick at +24h */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-1.5 h-3 bg-emerald-400 rounded-xs pointer-events-none shadow-[0_0_6px_#10B981] z-10"
-            style={{ left: `${((360 + 1440) / (360 + 2880)) * 100}%` }}
+            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
           />
         </div>
 
         {/* Time and Phase readout badge */}
-        <div className="px-2.5 py-1 rounded-lg bg-[#050B14] border border-[#162D4A] font-mono text-[11px] text-slate-200 shrink-0 flex items-center gap-2">
-          <span className="text-cyan-400 font-bold">{timeString}</span>
-          <span className={`font-bold text-[9px] px-1.5 py-0.2 rounded border ${badgeStyle}`}>
+        <div className="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-[10px] text-slate-200 shrink-0 flex items-center gap-1.5">
+          <span className="text-cyan-400 font-medium">{timeString}</span>
+          <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400">
             {badgeText}
           </span>
         </div>
@@ -747,24 +724,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Toggle Narrative Description drawer */}
         <button
           onClick={() => setShowNarrativeLog(!showNarrativeLog)}
-          className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer shrink-0 ${
-            showNarrativeLog ? 'bg-cyan-950/60 border-cyan-400/50 text-cyan-300' : 'bg-[#050B14] border-[#162D4A] text-slate-400 hover:text-slate-200'
+          className={`p-1 rounded-md border text-xs transition-colors cursor-pointer shrink-0 ${
+            showNarrativeLog ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
           }`}
           title="Toggle 4D Mission Event Log"
         >
-          <Info className="w-3.5 h-3.5" />
+          <Info className="w-3 h-3" />
         </button>
       </div>
 
       {/* Expandable Mission Narrative Bar */}
       {showNarrativeLog && (
-        <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-[#050B14]/90 border border-[#162D4A] text-xs animate-in fade-in">
+        <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs animate-in fade-in">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] shrink-0" />
-            <span className="text-cyan-300 font-bold font-mono text-[11px] shrink-0">{phaseTitle} —</span>
-            <span className="text-slate-300 text-[11px] truncate">{phaseDesc}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+            <span className="text-cyan-300 font-medium font-mono text-[11px] shrink-0">{phaseTitle} —</span>
+            <span className="text-slate-400 text-[11px] truncate">{phaseDesc}</span>
           </div>
-          <div className={`px-2.5 py-0.5 rounded border text-[10px] font-mono font-bold shrink-0 ${badgeColor}`}>
+          <div className="px-2 py-0.5 rounded border border-slate-800 bg-slate-950 text-[10px] font-mono text-cyan-400 shrink-0">
             {areaBadge}
           </div>
         </div>
@@ -777,16 +754,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* ========================================================================= */}
       {/* STREAMLINED TOP TACTICAL CONTROL BAR */}
       {/* ========================================================================= */}
-      <div className="h-11 bg-[#070F1D]/95 backdrop-blur-md border-b border-[#162D4A] px-4 flex items-center justify-between text-xs shrink-0 z-20 gap-3">
+      <div className="h-11 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between text-xs shrink-0 z-20 gap-3">
         {/* Left: Scenario Toggle + Layout Selector */}
         <div className="flex items-center gap-2.5 overflow-x-auto custom-scrollbar py-1">
+          {/* Scenario Mode Segmented Switcher */}
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 shrink-0">
+            <button
+              onClick={() => {
+                const dualInc = allIncidents.find(i => i.id === 'OCN-042' || (!i.name.includes('Single') && i.id !== 'OCN-043')) || PRIMARY_INCIDENT;
+                if (onSelectIncident) onSelectIncident(dualInc);
+              }}
+              className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                isDualSpillScenario
+                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Simulate 2 ships discharging independently and coalescing into one slick"
+            >
+              <span>🛰️ Dual Ship</span>
+            </button>
+            <button
+              onClick={() => {
+                const singleInc = allIncidents.find(i => i.id === 'OCN-043' || i.name.includes('Single')) || SINGLE_SPILL_INCIDENT;
+                if (onSelectIncident) onSelectIncident(singleInc);
+              }}
+              className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                !isDualSpillScenario
+                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Simulate 1 ship discharging at origin and forecasting forward"
+            >
+              <span>🎯 Single Ship</span>
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-slate-800 shrink-0" />
           {/* Clean Layout Switcher */}
-          <div className="flex items-center bg-[#050B14] p-0.5 rounded-lg border border-[#162D4A] shrink-0">
+          <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 shrink-0">
             <button
               onClick={() => { setLayoutMode('map'); setInspectorOpen(false); }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 layoutMode === 'map'
-                  ? 'bg-[#00E5FF] text-[#050B14] font-bold shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Full canvas interactive nautical GIS map"
@@ -798,7 +808,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => { setLayoutMode('split'); setInspectorOpen(true); }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 layoutMode === 'split'
-                  ? 'bg-[#00E5FF] text-[#050B14] font-bold shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Side-by-side tactical map & forensic intelligence"
@@ -810,7 +820,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onClick={() => { setLayoutMode('briefing'); setInspectorOpen(true); }}
               className={`px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 layoutMode === 'briefing'
-                  ? 'bg-[#00E5FF] text-[#050B14] font-bold shadow-[0_0_10px_rgba(0,229,255,0.4)]'
+                  ? 'bg-cyan-400 text-slate-950 font-bold shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Executive briefing command dashboard with top KPI metrics"
@@ -820,22 +830,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="h-4 w-px bg-[#162D4A] shrink-0" />
+          <div className="h-4 w-px bg-slate-800 shrink-0" />
 
           {/* Clean Layers Popover Button */}
           <div className="relative">
             <button
               onClick={() => setLayersDropdownOpen(!layersDropdownOpen)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                 layersDropdownOpen
-                  ? 'bg-[#00E5FF]/15 text-[#00E5FF] border-[#00E5FF]/50 shadow-[0_0_10px_rgba(0,229,255,0.2)]'
-                  : 'bg-[#0B1523] text-slate-300 border-[#162D4A] hover:bg-[#0E1B2C] hover:text-white'
+                  ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                  : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800 hover:text-white'
               }`}
               title="Configure Active Geospatial Layers"
             >
               <Layers className="w-3.5 h-3.5 text-cyan-400" />
               <span>Layers</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#070F1D] text-cyan-400 border border-[#162D4A]">
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-cyan-400 border border-slate-800">
                 {activeLayersCount}
               </span>
               <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${layersDropdownOpen ? 'rotate-180' : ''}`} />
@@ -843,8 +853,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Floating Layers Dropdown Menu */}
             {layersDropdownOpen && (
-              <div className="absolute left-0 top-full mt-2 w-64 bg-[#070F1D]/95 border border-[#162D4A] rounded-xl shadow-2xl p-2 z-50 text-xs backdrop-blur-xl animate-in fade-in space-y-1">
-                <div className="px-2 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-[#162D4A] mb-1 flex items-center justify-between">
+              <div className="absolute left-0 top-full mt-2 w-64 bg-slate-900/95 border border-slate-800 rounded-xl shadow-2xl p-2 z-50 text-xs backdrop-blur-xl animate-in fade-in space-y-1">
+                <div className="px-2 py-1 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-800 mb-1 flex items-center justify-between">
                   <span>Geospatial Layers</span>
                   <button
                     onClick={() => setLayersDropdownOpen(false)}
@@ -854,12 +864,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </button>
                 </div>
                 {[
-                  { key: 'oilSlicks', label: 'Oil Slick (SAR)', color: 'text-[#EF4444]' },
-                  { key: 'aisVessels', label: 'AIS Vessels', color: 'text-[#00E5FF]' },
-                  { key: 'vesselTracks', label: 'AIS Navigation Tracks', color: 'text-[#8B5CF6]' },
-                  { key: 'hindcastTrajectory', label: 'Lagrangian Hindcast (-5h)', color: 'text-[#3B82F6]' },
-                  { key: 'forecastCone', label: 'Drift Forecast (+48h)', color: 'text-[#10B981]' },
-                  { key: 'shorelineRisk', label: 'Shoreline Threat Zone', color: 'text-[#F59E0B]' },
+                  { key: 'oilSlicks', label: 'Oil Slick (SAR)', color: 'text-rose-400' },
+                  { key: 'aisVessels', label: 'AIS Vessels', color: 'text-cyan-400' },
+                  { key: 'vesselTracks', label: 'AIS Navigation Tracks', color: 'text-violet-400' },
+                  { key: 'hindcastTrajectory', label: 'Lagrangian Hindcast (-5h)', color: 'text-blue-400' },
+                  { key: 'forecastCone', label: 'Drift Forecast (+48h)', color: 'text-emerald-400' },
+                  { key: 'shorelineRisk', label: 'Shoreline Threat Zone', color: 'text-amber-400' },
                   { key: 'temporalValidation', label: 'Temporal Validation Engine', color: 'text-cyan-300' }
                 ].map(layer => {
                   const isEnabled = layerState[layer.key as keyof MapLayerState];
@@ -867,12 +877,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <button
                       key={layer.key}
                       onClick={() => onToggleLayer(layer.key as keyof MapLayerState)}
-                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[#0E1B2C] text-left transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-800/80 text-left transition-colors cursor-pointer"
                     >
                       <span className={isEnabled ? `${layer.color} font-medium` : 'text-slate-400'}>
                         {layer.label}
                       </span>
-                      <span className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-[#00E5FF] shadow-[0_0_6px_#00E5FF]' : 'bg-slate-700'}`} />
+                      <span className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.5)]' : 'bg-slate-700'}`} />
                     </button>
                   );
                 })}
@@ -883,18 +893,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Right: Coordinates & Inspector Toggle */}
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-2 text-slate-400 font-mono text-[11px] bg-[#050B14] px-2.5 py-1 rounded-md border border-[#162D4A]">
-            <span className="text-cyan-400 font-semibold">18.112°N, 72.464°E</span>
+          <div className="hidden lg:flex items-center gap-2 text-slate-400 font-mono text-[11px] bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
+            <span className="text-cyan-400 font-medium">18.112°N, 72.464°E</span>
             <span className="text-slate-600">·</span>
-            <span className="text-slate-300 font-sans font-medium">{incident.locationName}</span>
+            <span className="text-slate-300 font-sans">{incident.locationName}</span>
           </div>
 
           <button
             onClick={() => setInspectorOpen(!inspectorOpen)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-semibold transition-all shadow-xs cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-all shadow-xs cursor-pointer ${
               inspectorOpen
-                ? 'bg-[#0B1523] text-cyan-400 border-[#00E5FF]/40 hover:bg-[#0E1B2C]'
-                : 'bg-[#0B1523] text-slate-300 border-[#162D4A] hover:bg-[#0E1B2C] hover:text-white'
+                ? 'bg-slate-900 text-cyan-300 border-cyan-500/30 hover:bg-slate-800'
+                : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800 hover:text-white'
             }`}
             title={inspectorOpen ? 'Collapse inspector panel' : 'Open intelligence inspector'}
           >
@@ -908,49 +918,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* EXECUTIVE BRIEFING KPI CARDS (Only displayed in Briefing Mode) */}
       {/* ========================================================================= */}
       {layoutMode === 'briefing' && (
-        <div className="bg-[#070F1D]/80 border-b border-[#162D4A] px-4 py-2.5 shrink-0 animate-in fade-in">
+        <div className="bg-slate-950/80 border-b border-slate-800/80 px-4 py-2.5 shrink-0 animate-in fade-in">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* KPI 1: Primary Culprit Vessel */}
-            <div className="p-3 rounded-xl bg-[#0B1523] border border-[#162D4A] flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">PRIMARY SUSPECT</span>
                 <span className="text-sm font-bold text-white font-mono mt-0.5 block truncate">{activeVessel.name}</span>
-                <span className="text-[10px] text-red-400 font-medium">Rank #1 · {activeVessel.type}</span>
+                <span className="text-[10px] text-rose-400 font-medium">Rank #1 · {activeVessel.type}</span>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-mono font-black text-cyan-400">{activeVessel.attributionScore}%</span>
+                <span className="text-2xl font-mono font-bold text-cyan-400">{activeVessel.attributionScore}%</span>
                 <span className="text-[9px] text-slate-400 uppercase block font-mono">Attribution</span>
               </div>
             </div>
 
             {/* KPI 2: Satellite Slick Anomaly */}
-            <div className="p-3 rounded-xl bg-[#0B1523] border border-[#162D4A] flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">RADAR DETECTED SLICK</span>
                 <span className="text-sm font-bold text-white font-mono mt-0.5 block">{incident.slickAreaKm2} km²</span>
                 <span className="text-[10px] text-slate-400">Sentinel-1 C-SAR IW</span>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-mono font-black text-emerald-400">94.7%</span>
+                <span className="text-2xl font-mono font-bold text-emerald-400">94.7%</span>
                 <span className="text-[9px] text-slate-400 uppercase block font-mono">IoU Confidence</span>
               </div>
             </div>
 
             {/* KPI 3: Coastal Vulnerability */}
-            <div className="p-3 rounded-xl bg-[#0B1523] border border-[#162D4A] flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">SHORELINE THREAT</span>
                 <span className="text-sm font-bold text-white mt-0.5 block truncate">{shorelineRisk.name.split(',')[0]}</span>
                 <span className="text-[10px] text-amber-400 font-medium">{shorelineRisk.distanceOffshoreKm} km offshore</span>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-mono font-black text-amber-400">~{shorelineRisk.projectedEtaHours}h</span>
+                <span className="text-2xl font-mono font-bold text-amber-400">~{shorelineRisk.projectedEtaHours}h</span>
                 <span className="text-[9px] text-slate-400 uppercase block font-mono">Impact ETA</span>
               </div>
             </div>
 
             {/* KPI 4: MetOcean Advection */}
-            <div className="p-3 rounded-xl bg-[#0B1523] border border-[#162D4A] flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">METOCEAN FORCING</span>
                 <span className="text-sm font-bold text-white font-mono mt-0.5 block">{metocean.netDriftSpeedKt} kt</span>

@@ -19,34 +19,102 @@ import numpy as np
 from backend.ais_algorithm import compute_vessel_attribution
 
 
+import urllib.request
+import json
+import time
+
+_GEO_CACHE: dict[str, str] = {}
+
 def get_location_name(lat: float, lon: float) -> str:
     """
     Returns an authoritative maritime zone name and coordinates string.
+    Uses free BigDataCloud reverse geocoding API with in-memory caching
+    and falls back to regional maritime zone heuristics.
     """
-    if 17.5 <= lat <= 20.5 and 71.0 <= lon <= 73.5:
-        zone = "Offshore Mumbai Basin"
-    elif 12.0 <= lat <= 14.5 and 79.5 <= lon <= 81.5:
-        zone = "Chennai Port / Coromandel Coast"
-    elif 9.0 <= lat <= 11.5 and 75.0 <= lon <= 77.0:
-        zone = "Kochi Offshore / Malabar Coast"
-    elif 20.5 <= lat <= 23.5 and 68.0 <= lon <= 71.0:
-        zone = "Gulf of Kutch Maritime Zone"
-    elif 16.5 <= lat <= 18.5 and 81.5 <= lon <= 84.5:
-        zone = "Krishna-Godavari Basin (Vizag Coast)"
-    elif 5.0 <= lat <= 25.0 and 65.0 <= lon <= 77.0:
-        zone = "Arabian Sea EEZ"
-    elif 5.0 <= lat <= 25.0 and 77.0 <= lon <= 95.0:
-        zone = "Bay of Bengal Maritime Sector"
-    else:
-        zone = "International Maritime Sector"
+    cache_key = f"{round(lat, 2)}_{round(lon, 2)}"
+    if cache_key in _GEO_CACHE:
+        return _GEO_CACHE[cache_key]
+
+    zone = None
+    try:
+        url = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=en"
+        req = urllib.request.Request(url, headers={"User-Agent": "SpillTheory/2.0"})
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            data = json.loads(resp.read().decode())
+            water = data.get("waterBody") or data.get("locality")
+            country = data.get("countryName")
+            subdiv = data.get("principalSubdivision")
+            candidates = [p for p in [water, subdiv, country] if p and p.strip()]
+            if candidates:
+                zone = " - ".join(candidates[:2])
+    except Exception:
+        pass
+
+    if not zone:
+        if 17.5 <= lat <= 20.5 and 71.0 <= lon <= 73.5:
+            zone = "Offshore Mumbai Basin (Arabian Sea)"
+        elif 12.0 <= lat <= 14.5 and 79.5 <= lon <= 81.5:
+            zone = "Chennai Port / Coromandel Coast"
+        elif 9.0 <= lat <= 11.5 and 75.0 <= lon <= 77.0:
+            zone = "Kochi Offshore / Malabar Coast"
+        elif 20.5 <= lat <= 23.5 and 68.0 <= lon <= 71.0:
+            zone = "Gulf of Kutch Maritime Zone"
+        elif 16.5 <= lat <= 18.5 and 81.5 <= lon <= 84.5:
+            zone = "Krishna-Godavari Basin (Vizag Coast)"
+        elif 5.0 <= lat <= 25.0 and 65.0 <= lon <= 77.0:
+            zone = "Arabian Sea EEZ"
+        elif 5.0 <= lat <= 25.0 and 77.0 <= lon <= 95.0:
+            zone = "Bay of Bengal Maritime Sector"
+        else:
+            zone = "International Maritime Sector"
 
     lat_h = f"{abs(lat):.2f}\u00b0{'N' if lat >= 0 else 'S'}"
     lon_h = f"{abs(lon):.2f}\u00b0{'E' if lon >= 0 else 'W'}"
-    return f"{zone} ({lat_h}, {lon_h})"
+    result = f"{zone} ({lat_h}, {lon_h})"
+    _GEO_CACHE[cache_key] = result
+    return result
 
 
 # In-memory store of registered spills & scenarios (shared across SAR & EO)
-ACTIVE_SPILLS: list[dict[str, Any]] = []
+def _init_active_spills() -> list[dict[str, Any]]:
+    """Generates active incidents with current real-time timestamps and dynamic locations."""
+    now = datetime.now(timezone.utc)
+    t_now = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_2d = (now - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_5d = (now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return [
+        {
+            "spill_id": "OCN-042",
+            "timestamp": t_now,
+            "location": get_location_name(18.112, 72.464),
+            "area_km2": 13.48,
+            "status": "Active Investigation - Dual Coalesced"
+        },
+        {
+            "spill_id": "OCN-043",
+            "timestamp": t_now,
+            "location": get_location_name(18.112, 72.464),
+            "area_km2": 8.25,
+            "status": "Active Investigation - Single Point-Source"
+        },
+        {
+            "spill_id": "SPILL_002",
+            "timestamp": t_2d,
+            "location": get_location_name(13.12, 80.45),
+            "area_km2": 1.5,
+            "status": "Resolved - Attributed"
+        },
+        {
+            "spill_id": "SPILL_003",
+            "timestamp": t_5d,
+            "location": get_location_name(9.95, 76.05),
+            "area_km2": 8.7,
+            "status": "Resolved - Natural Seep"
+        }
+    ]
+
+ACTIVE_SPILLS: list[dict[str, Any]] = _init_active_spills()
 
 CUSTOM_SCENARIOS: dict[str, Any] = {}
 

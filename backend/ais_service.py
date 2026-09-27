@@ -324,19 +324,35 @@ def generate_sector_ais_vessels(
         cand2 = {"name": f"{loc_prefix} TRADER", "type": "Container Ship", "mmsi": int(f"636{int(abs(lon*888) % 899999 + 100000)}"[:9]), "imo": "9382210", "flag": "Liberia", "dest": "Transit", "sog": 14.2, "heading": 120}
         cand3 = {"name": f"{loc_prefix} MARU", "type": "General Cargo", "mmsi": int(f"257{int(abs(lat*999) % 899999 + 100000)}"[:9]), "imo": "9366540", "flag": "Norway", "dest": "Transit", "sog": 11.0, "heading": 145}
 
+    # Parse detection_timestamp dynamically
+    try:
+        dt_base = datetime.fromisoformat(detection_timestamp.replace("Z", "+00:00"))
+    except Exception:
+        dt_base = datetime.now(timezone.utc)
+
+    t_v1_1 = (dt_base - timedelta(hours=2, minutes=50)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v1_2 = (dt_base - timedelta(hours=2, minutes=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v1_3 = (dt_base - timedelta(hours=1, minutes=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v1_4 = (dt_base - timedelta(minutes=62)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v1_5 = dt_base.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    t_v2_1 = (dt_base - timedelta(hours=2, minutes=52)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v2_2 = (dt_base - timedelta(hours=1, minutes=57)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v2_3 = (dt_base - timedelta(minutes=72)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_v2_4 = dt_base.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     # Generate 5-waypoint track for Vessel 1 precisely crossing Origin 1
-    # 01:42 (entry), 02:18 (approach), 02:47 (discharge at origin), 03:30 (departing), 04:32 (SAR observation)
     rad_v1 = math.radians(v1_heading)
     dx1 = math.sin(rad_v1)
     dy1 = math.cos(rad_v1)
     cos_lat = math.cos(math.radians(o1_lat))
 
     vessel1_path = [
-        {"timestamp": "2026-09-07T01:42:00Z", "lat": round(o1_lat - (dy1 * 0.160), 5), "lon": round(o1_lon - (dx1 * 0.160) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
-        {"timestamp": "2026-09-07T02:18:00Z", "lat": round(o1_lat - (dy1 * 0.080), 5), "lon": round(o1_lon - (dx1 * 0.080) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
-        {"timestamp": "2026-09-07T02:47:00Z", "lat": round(o1_lat, 5), "lon": round(o1_lon, 5), "heading": v1_heading, "sog": round(v1_sog * 0.72, 1)},  # Speed drop at discharge
-        {"timestamp": "2026-09-07T03:30:00Z", "lat": round(o1_lat + (dy1 * 0.110), 5), "lon": round(o1_lon + (dx1 * 0.110) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
-        {"timestamp": detection_timestamp, "lat": round(o1_lat + (dy1 * 0.230), 5), "lon": round(o1_lon + (dx1 * 0.230) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
+        {"timestamp": t_v1_1, "lat": round(o1_lat - (dy1 * 0.160), 5), "lon": round(o1_lon - (dx1 * 0.160) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
+        {"timestamp": t_v1_2, "lat": round(o1_lat - (dy1 * 0.080), 5), "lon": round(o1_lon - (dx1 * 0.080) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
+        {"timestamp": t_v1_3, "lat": round(o1_lat, 5), "lon": round(o1_lon, 5), "heading": v1_heading, "sog": round(v1_sog * 0.72, 1)},  # Speed drop at discharge
+        {"timestamp": t_v1_4, "lat": round(o1_lat + (dy1 * 0.110), 5), "lon": round(o1_lon + (dx1 * 0.110) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
+        {"timestamp": t_v1_5, "lat": round(o1_lat + (dy1 * 0.230), 5), "lon": round(o1_lon + (dx1 * 0.230) / cos_lat, 5), "heading": v1_heading, "sog": v1_sog},
     ]
 
     rad_v2 = math.radians(v2_heading)
@@ -345,10 +361,10 @@ def generate_sector_ais_vessels(
     cos_lat2 = math.cos(math.radians(o2_lat))
 
     vessel2_path = [
-        {"timestamp": "2026-09-07T01:40:00Z", "lat": round(o2_lat - (dy2 * 0.150), 5), "lon": round(o2_lon - (dx2 * 0.150) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
-        {"timestamp": "2026-09-07T02:35:00Z", "lat": round(o2_lat, 5), "lon": round(o2_lon, 5), "heading": v2_heading, "sog": round(v2_sog * 0.75, 1)},  # Speed drop at discharge
-        {"timestamp": "2026-09-07T03:20:00Z", "lat": round(o2_lat + (dy2 * 0.120), 5), "lon": round(o2_lon + (dx2 * 0.120) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
-        {"timestamp": detection_timestamp, "lat": round(o2_lat + (dy2 * 0.240), 5), "lon": round(o2_lon + (dx2 * 0.240) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
+        {"timestamp": t_v2_1, "lat": round(o2_lat - (dy2 * 0.150), 5), "lon": round(o2_lon - (dx2 * 0.150) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
+        {"timestamp": t_v2_2, "lat": round(o2_lat, 5), "lon": round(o2_lon, 5), "heading": v2_heading, "sog": round(v2_sog * 0.75, 1)},  # Speed drop at discharge
+        {"timestamp": t_v2_3, "lat": round(o2_lat + (dy2 * 0.120), 5), "lon": round(o2_lon + (dx2 * 0.120) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
+        {"timestamp": t_v2_4, "lat": round(o2_lat + (dy2 * 0.240), 5), "lon": round(o2_lon + (dx2 * 0.240) / cos_lat2, 5), "heading": v2_heading, "sog": v2_sog},
     ]
 
     result_vessels = [
@@ -378,7 +394,11 @@ def generate_sector_ais_vessels(
             "path": vessel2_path
         })
 
-    # Add surrounding sector traffic candidate tracks
+    # Add surrounding sector traffic candidate tracks with dynamic timestamps
+    t_c_1 = (dt_base - timedelta(hours=3, minutes=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_c_2 = (dt_base - timedelta(hours=1, minutes=47)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    t_c_3 = dt_base.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     for offset_idx, cand in enumerate([cand1, cand2, cand3]):
         c_lat_offset = round(lat + (offset_idx * 0.08 - 0.08), 5)
         c_lon_offset = round(lon + (offset_idx * 0.09 - 0.05), 5)
@@ -388,9 +408,9 @@ def generate_sector_ais_vessels(
         c_dy = math.cos(r_c) * 0.12
 
         cand_path = [
-            {"timestamp": "2026-09-07T01:30:00Z", "lat": round(c_lat_offset - c_dy, 5), "lon": round(c_lon_offset - c_dx, 5), "heading": c_head, "sog": cand["sog"]},
-            {"timestamp": "2026-09-07T02:45:00Z", "lat": c_lat_offset, "lon": c_lon_offset, "heading": c_head, "sog": cand["sog"]},
-            {"timestamp": detection_timestamp, "lat": round(c_lat_offset + c_dy, 5), "lon": round(c_lon_offset + c_dx, 5), "heading": c_head, "sog": cand["sog"]},
+            {"timestamp": t_c_1, "lat": round(c_lat_offset - c_dy, 5), "lon": round(c_lon_offset - c_dx, 5), "heading": c_head, "sog": cand["sog"]},
+            {"timestamp": t_c_2, "lat": c_lat_offset, "lon": c_lon_offset, "heading": c_head, "sog": cand["sog"]},
+            {"timestamp": t_c_3, "lat": round(c_lat_offset + c_dy, 5), "lon": round(c_lon_offset + c_dx, 5), "heading": c_head, "sog": cand["sog"]},
         ]
         result_vessels.append({
             "mmsi": cand["mmsi"],
@@ -481,3 +501,62 @@ def fetch_ais_vessels_for_coordinates(
         "vessels": formatted_vessels,
         "attribution_ranking": scored_candidates
     }
+
+
+def get_all_live_ais_vessels(limit: int = 80) -> List[Dict[str, Any]]:
+    """
+    Fetches real-time live AIS broadcasts from Digitraffic open API.
+    Returns real vessels with live coordinates, speed, heading, and identity.
+    """
+    try:
+        url = "https://meri.digitraffic.fi/api/ais/v1/locations"
+        resp = _SESSION.get(url, timeout=7)
+        if resp.status_code != 200:
+            return []
+        features = resp.json().get("features", [])
+        metadata = _get_live_vessel_metadata()
+        vessels = []
+        for feat in features[:limit]:
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if len(coords) < 2:
+                continue
+            v_lon, v_lat = float(coords[0]), float(coords[1])
+            props = feat.get("properties", {})
+            mmsi = props.get("mmsi")
+            v_meta = metadata.get(mmsi, {})
+            ship_type_code = v_meta.get("shipType", 70)
+            if 80 <= ship_type_code <= 89:
+                ship_type = "Crude/Product Tanker"
+            elif 70 <= ship_type_code <= 79:
+                ship_type = "Cargo / Bulk Carrier"
+            elif 60 <= ship_type_code <= 69:
+                ship_type = "Passenger Vessel"
+            elif 50 <= ship_type_code <= 59:
+                ship_type = "Port / Pilot Tug"
+            else:
+                ship_type = "Merchant Vessel"
+
+            raw_ts = props.get("timestamp")
+            if raw_ts:
+                ts_str = datetime.fromtimestamp(raw_ts / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            else:
+                ts_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            vessels.append({
+                "mmsi": mmsi,
+                "name": v_meta.get("name") or f"VESSEL-{mmsi}",
+                "imo": str(v_meta.get("imo") or (9000000 + (mmsi % 900000))),
+                "type": ship_type,
+                "flag": "International",
+                "destination": v_meta.get("destination") or "In Transit",
+                "lat": round(v_lat, 5),
+                "lon": round(v_lon, 5),
+                "sog": float(props.get("sog", 10.0)),
+                "cog": float(props.get("cog", 0.0)),
+                "heading": float(props.get("heading", props.get("cog", 0.0))),
+                "timestamp": ts_str
+            })
+        return vessels
+    except Exception:
+        return []
+

@@ -67,18 +67,18 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   }, []);
 
   return (
-    <header className="h-12 bg-[#070F1D]/95 backdrop-blur-md border-b border-[#162D4A] px-4 flex items-center justify-between select-none z-30 sticky top-0 text-slate-100 font-sans transition-colors duration-200">
-      {/* Left: Brand Logo at the Edge + System Status */}
+    <header className="h-11 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between select-none z-30 sticky top-0 text-slate-100 font-sans transition-colors duration-200">
+      {/* Left: Brand Logo + System Status */}
       <div className="flex items-center gap-3">
         <SpillTheoryLogo size="md" showWordmark={true} />
 
-        <div className="h-3.5 w-px bg-[#162D4A] hidden sm:block" />
+        <div className="h-3 w-px bg-slate-800 hidden sm:block" />
 
         {/* Backend Live Indicator */}
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0B1523] border border-[#162D4A] text-[11px] shadow-xs">
-          <span className={`w-1.5 h-1.5 rounded-full ${backendOnline ? 'bg-[#10B981] shadow-[0_0_6px_#10B981]' : 'bg-[#EF4444]'}`} />
-          <span className="text-slate-400 font-mono text-[10px]">FastAPI</span>
-          <span className={`font-mono text-[10px] ${backendOnline ? 'text-slate-200 font-semibold' : 'text-[#EF4444]'}`}>
+        <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[11px]">
+          <span className={`w-1.5 h-1.5 rounded-full ${backendOnline ? 'bg-emerald-400' : 'bg-rose-500'}`} />
+          <span className="text-slate-400 font-mono text-[10px]">API</span>
+          <span className={`font-mono text-[10px] ${backendOnline ? 'text-slate-200 font-medium' : 'text-rose-400'}`}>
             {backendOnline ? `${backendLatency}ms` : 'OFFLINE'}
           </span>
         </div>
@@ -88,7 +88,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       <div className="relative">
         <button
           onClick={() => setIncidentMenuOpen(!incidentMenuOpen)}
-          className="flex items-center gap-2 px-3 py-1 rounded-md bg-[#0B1523] hover:bg-[#0E1B2C] border border-[#162D4A] text-xs text-slate-200 transition-colors shadow-xs"
+          className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 text-xs text-slate-200 transition-colors"
         >
           <span className="text-slate-400 text-[11px]">Incident:</span>
           <span className="font-semibold text-cyan-400 font-mono">{currentIncident.id}</span>
@@ -97,8 +97,8 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         </button>
 
         {incidentMenuOpen && (
-          <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 w-80 bg-[#070F1D] border border-[#162D4A] rounded-lg shadow-xl p-1 z-50 animate-in fade-in">
-            <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-[#162D4A] mb-1">
+          <div className="absolute top-full mt-1.5 left-1/2 -translate-x-1/2 w-80 bg-slate-950 border border-slate-800 rounded-lg shadow-xl p-1 z-50 animate-in fade-in">
+            <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800 mb-1">
               Select Incident Scenario
             </div>
             {allIncidents.map(inc => (
@@ -110,15 +110,15 @@ export const CommandBar: React.FC<CommandBarProps> = ({
                 }}
                 className={`w-full text-left px-2.5 py-2 rounded-md flex items-center justify-between text-xs transition-colors ${
                   inc.id === currentIncident.id
-                    ? 'bg-[#00E5FF]/10 text-cyan-300 border border-[#00E5FF]/40 font-medium'
-                    : 'hover:bg-[#0E1B2C] text-slate-300'
+                    ? 'bg-cyan-500/10 text-cyan-300 font-medium'
+                    : 'hover:bg-slate-900 text-slate-300'
                 }`}
               >
                 <div>
                   <div className="font-medium font-mono text-slate-200">{inc.id} · {inc.name}</div>
                   <div className="text-[11px] text-slate-400">{inc.locationName}</div>
                 </div>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0B1523] text-slate-300 border border-[#162D4A] font-mono">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 font-mono">
                   {inc.slickAreaKm2} km²
                 </span>
               </button>
@@ -131,54 +131,54 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       <div className="flex items-center gap-2">
         <button
           onClick={onOpenCommandPalette}
-          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0B1523] hover:bg-[#0E1B2C] border border-[#162D4A] text-slate-300 text-xs transition-colors shadow-xs"
+          className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 text-slate-300 text-xs transition-colors"
           title="Search or press Ctrl+K"
         >
           <Search className="w-3.5 h-3.5 text-slate-400" />
-          <span>Quick Find <kbd className="text-[10px] font-mono bg-[#050B14] px-1 py-0.5 rounded text-slate-300 border border-[#162D4A]">Ctrl K</kbd></span>
+          <span>Quick Find <kbd className="text-[10px] font-mono bg-slate-950 px-1 py-0.5 rounded text-slate-400 border border-slate-800">Ctrl K</kbd></span>
         </button>
 
         {/* Theme Toggle Button */}
         {onToggleTheme && (
           <button
             onClick={onToggleTheme}
-            className="p-1.5 rounded-md bg-[#0B1523] hover:bg-[#0E1B2C] border border-[#162D4A] text-slate-300 transition-colors shadow-xs cursor-pointer"
+            className="p-1.5 rounded-md bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 text-slate-300 transition-colors cursor-pointer"
             title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
             aria-label="Toggle color theme"
           >
             {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-cyan-400" />
+              <Sun className="w-3.5 h-3.5 text-cyan-400" />
             ) : (
-              <Moon className="w-4 h-4 text-slate-300" />
+              <Moon className="w-3.5 h-3.5 text-slate-300" />
             )}
           </button>
         )}
 
-        {/* Primary Demo Action (Electric Cyan Solid Accent) */}
+        {/* Primary Demo Action */}
         <button
           onClick={onRunFullInvestigation}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#00E5FF] hover:bg-[#33EAFF] text-[#050B14] text-xs font-bold shadow-[0_0_15px_rgba(0,229,255,0.35)] transition-all active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
         >
-          <Sparkles className="w-3.5 h-3.5 fill-[#050B14] text-[#050B14]" />
+          <Sparkles className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
           <span>Investigation Demo</span>
         </button>
 
         {/* Notification Bell */}
         <button
           onClick={onOpenNotifications}
-          className="relative p-1.5 rounded-md hover:bg-[#0E1B2C] text-slate-300 transition-colors cursor-pointer"
+          className="relative p-1.5 rounded-md hover:bg-slate-900 text-slate-300 transition-colors cursor-pointer"
           title="Notifications"
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="w-3.5 h-3.5" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#00E5FF] rounded-full ring-2 ring-[#070F1D]" />
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-cyan-400 rounded-full" />
           )}
         </button>
 
         {/* Live UTC Clock */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0B1523] border border-[#162D4A] text-xs text-slate-300">
-          <Clock className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-mono text-[11px] tabular-nums text-slate-200">{utcTime}</span>
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+          <Clock className="w-3 h-3 text-cyan-400" />
+          <span className="font-mono text-[11px] tabular-nums text-slate-300">{utcTime}</span>
         </div>
       </div>
     </header>

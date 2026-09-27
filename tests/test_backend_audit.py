@@ -6,7 +6,7 @@ client = TestClient(app)
 
 
 def test_root_health():
-    resp = client.get("/")
+    resp = client.get("/api")
     assert resp.status_code == 200
     data = resp.json()
     assert "status" in data

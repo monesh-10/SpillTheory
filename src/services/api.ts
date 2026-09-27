@@ -24,7 +24,10 @@ import {
   AI_MODELS
 } from '../data/mockData';
 
-const BACKEND_URL = 'http://127.0.0.1:8000';
+export const BACKEND_URL = (import.meta as any).env?.VITE_API_URL || 
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:8000'
+    : '');
 
 export interface ScenarioBundle {
   incident: Incident;
