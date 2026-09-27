@@ -73,7 +73,7 @@ function getVesselPositionAtTime(
   t: number,
   originCoordinates?: [number, number]
 ): { pos: [number, number]; heading: number } {
-  const o1: [number, number] = originCoordinates || [18.065, 72.395];
+  const o1: [number, number] = originCoordinates || vessel.currentCoordinates || [18.065, 72.395];
   const o2: [number, number] = [o1[0] - 0.015, o1[1] + 0.020];
 
   const vName = (vessel.name || '').toUpperCase();
@@ -82,8 +82,8 @@ function getVesselPositionAtTime(
 
   if (isSuspect1) {
     const entryPt: [number, number] = [Number((o1[0] + 0.115).toFixed(5)), Number((o1[1] - 0.115).toFixed(5))];
-    const nowPt: [number, number] = vessel.currentCoordinates || [17.895, 72.565];
-    const baseHeading = 125;
+    const nowPt: [number, number] = vessel.currentCoordinates || [Number((o1[0] - 0.170).toFixed(5)), Number((o1[1] + 0.170).toFixed(5))];
+    const baseHeading = vessel.currentHeadingDeg || 125;
 
     // 1. Pre-discharge entry regime: [-360 min to -300 min] (Clean sea, vessel navigates to origin)
     if (t <= -300) {
@@ -102,7 +102,7 @@ function getVesselPositionAtTime(
       return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading };
     }
 
-    // 3. Forward Forecast regime: [0 min to +2880 min / +48h] (Sailing forward along 125° SE in open sea corridor)
+    // 3. Forward Forecast regime: [0 min to +2880 min / +48h]
     const hours = t / 60;
     const speedKt = vessel.currentSpeedKt || 11.4;
     const distKm = speedKt * 1.852 * hours;
@@ -110,14 +110,14 @@ function getVesselPositionAtTime(
     const dLat = (distKm * Math.cos(headingRad)) / 111.0;
     const dLng = (distKm * Math.sin(headingRad)) / (111.0 * Math.cos((nowPt[0] * Math.PI) / 180));
     const projectedLat = Number((nowPt[0] + dLat).toFixed(5));
-    const projectedLng = Number(Math.min(72.76, nowPt[1] + dLng).toFixed(5)); // Clamped to open sea corridor
+    const projectedLng = Number((nowPt[1] + dLng).toFixed(5));
     return { pos: [projectedLat, projectedLng], heading: baseHeading };
   }
 
   if (isSuspect2) {
     const entryPt2: [number, number] = [Number((o2[0] - 0.090).toFixed(5)), Number((o2[1] + 0.075).toFixed(5))];
-    const nowPt2: [number, number] = vessel.currentCoordinates || [18.230, 72.260];
-    const baseHeading2 = 310;
+    const nowPt2: [number, number] = vessel.currentCoordinates || [Number((o2[0] + 0.180).toFixed(5)), Number((o2[1] - 0.155).toFixed(5))];
+    const baseHeading2 = vessel.currentHeadingDeg || 310;
 
     // 1. Pre-discharge entry regime: [-360 min to -300 min]
     if (t <= -300) {
@@ -136,7 +136,7 @@ function getVesselPositionAtTime(
       return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading2 };
     }
 
-    // 3. Forward Forecast regime: [0 min to +2880 min / +48h] (Sailing forward along 310° NW in open sea)
+    // 3. Forward Forecast regime: [0 min to +2880 min / +48h]
     const hours = t / 60;
     const speedKt = vessel.currentSpeedKt || 10.8;
     const distKm = speedKt * 1.852 * hours;
@@ -151,7 +151,7 @@ function getVesselPositionAtTime(
   // Generic fallback for any other vessels in candidate table
   const rawTrack = vessel.track;
   if (!rawTrack || rawTrack.length === 0) {
-    return { pos: vessel.currentCoordinates || [18.112, 72.464], heading: vessel.currentHeadingDeg || 0 };
+    return { pos: vessel.currentCoordinates || o1, heading: vessel.currentHeadingDeg || 0 };
   }
 
   const track = rawTrack.map(pt => ({ ...pt }));
