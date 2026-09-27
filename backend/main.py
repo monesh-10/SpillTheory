@@ -193,6 +193,11 @@ def get_scenario(spill_id: str):
             data["spill_event"]["topology"] = "SINGLE_POINT_SOURCE"
             # Single vessel only
             data["ais"]["vessel_tracks"] = [data["ais"]["vessel_tracks"][0]]
+        elif spill_id == "SPILL_004" or "kutch" in spill_id.lower():
+            data["spill_event"]["spill_id"] = "SPILL_004"
+            data["spill_event"]["area_km2"] = 11.20
+            data["spill_event"]["classification"] = "Gulf of Kutch Crude Tanker Discharging Slick"
+            data["spill_event"]["centroid"] = {"lat": 22.45, "lon": 69.20}
 
     # Inject live MetOcean telemetry and real-time Lagrangian drift forecast (+48 hours)
     try:
@@ -202,8 +207,8 @@ def get_scenario(spill_id: str):
             spill_time = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
             data["spill_event"]["timestamp"] = spill_time
 
-        c_lat = float(data.get("spill_event", {}).get("centroid", {}).get("lat", 18.112))
-        c_lon = float(data.get("spill_event", {}).get("centroid", {}).get("lon", 72.464))
+        c_lat = float(data.get("spill_event", {}).get("centroid", {}).get("lat", 22.45 if spill_id == "SPILL_004" else 18.112))
+        c_lon = float(data.get("spill_event", {}).get("centroid", {}).get("lon", 69.20 if spill_id == "SPILL_004" else 72.464))
         data["spill_event"]["location_name"] = get_location_name(c_lat, c_lon)
 
         start_time = spill_time

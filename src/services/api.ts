@@ -83,11 +83,15 @@ export const apiService = {
               ? [13.12, 80.45]
               : item.spill_id === 'SPILL_003'
               ? [9.95, 76.05]
+              : item.spill_id === 'SPILL_004' || item.spill_id?.includes('KUTCH')
+              ? [22.45, 69.20]
               : [18.12, 72.45];
             const name = item.spill_id === 'SPILL_002'
               ? 'Chennai Port Cargo Bunker Leak'
               : item.spill_id === 'SPILL_003'
               ? 'Kochi Malabar Coast Seep'
+              : item.spill_id === 'SPILL_004'
+              ? 'Gulf of Kutch Crude Tanker Discharging Slick'
               : (item.location || fallback.name);
             list.push({
               ...fallback,

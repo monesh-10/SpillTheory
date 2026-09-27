@@ -252,6 +252,7 @@ export const App: React.FC = () => {
                 setVessels(newVessels);
                 if (newVessels.length > 0) setSelectedVessel(newVessels[0]);
               }}
+              onSelectIncident={(inc) => setCurrentIncident(inc)}
               currentIncidentCoordinates={currentIncident.coordinates}
             />
           )}

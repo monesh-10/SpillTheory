@@ -325,7 +325,7 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 </div>
               </div>
 
-              {/* Manual Coordinate Override Section */}
+              {/* Manual & Preset Coordinate Override Section */}
               <div className="border-t border-[#162D4A] pt-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-slate-300 uppercase font-bold tracking-wider flex items-center gap-1">
@@ -343,6 +343,31 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                   >
                     {manualCoordMode ? 'MANUAL: ON' : 'AUTO-PROJECTION'}
                   </button>
+                </div>
+
+                {/* Preset Sector Quick Buttons */}
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {PRESET_SECTORS.map((sec) => (
+                    <button
+                      key={sec.name}
+                      type="button"
+                      onClick={() => {
+                        setCustomLat(sec.lat);
+                        setCustomLon(sec.lon);
+                        setCustomOriginLat(sec.origLat);
+                        setCustomOriginLon(sec.origLon);
+                        setManualCoordMode(true);
+                      }}
+                      className={`px-2 py-1 rounded text-[10px] font-mono flex items-center justify-between border transition-all cursor-pointer ${
+                        manualCoordMode && customLat === sec.lat && customLon === sec.lon
+                          ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold shadow-xs'
+                          : 'bg-[#0B1523] border-[#162D4A] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                      }`}
+                    >
+                      <span>📍 {sec.name}</span>
+                      <span className="text-[8.5px] text-slate-500">{sec.lat}°N</span>
+                    </button>
+                  ))}
                 </div>
 
                 {manualCoordMode ? (

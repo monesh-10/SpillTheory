@@ -99,6 +99,13 @@ def _init_active_spills() -> list[dict[str, Any]]:
             "status": "Active Investigation - Single Point-Source"
         },
         {
+            "spill_id": "SPILL_004",
+            "timestamp": t_now,
+            "location": get_location_name(22.45, 69.20),
+            "area_km2": 11.20,
+            "status": "Active Investigation - Gulf of Kutch Tanker Spill"
+        },
+        {
             "spill_id": "SPILL_002",
             "timestamp": t_2d,
             "location": get_location_name(13.12, 80.45),

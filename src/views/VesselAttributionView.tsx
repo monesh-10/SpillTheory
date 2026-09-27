@@ -16,7 +16,7 @@ import {
   Sliders,
   ShieldAlert
 } from 'lucide-react';
-import { Vessel } from '../types';
+import { Vessel, Incident } from '../types';
 import { apiService } from '../services/api';
 
 interface VesselAttributionViewProps {
@@ -24,6 +24,7 @@ interface VesselAttributionViewProps {
   onSelectVessel: (vessel: Vessel) => void;
   onOpenWorkspace: () => void;
   onUpdateVessels?: (newVessels: Vessel[]) => void;
+  onSelectIncident?: (incident: Incident) => void;
   currentIncidentCoordinates?: [number, number];
 }
 
@@ -99,6 +100,7 @@ export const VesselAttributionView: React.FC<VesselAttributionViewProps> = ({
   onSelectVessel,
   onOpenWorkspace,
   onUpdateVessels,
+  onSelectIncident,
   currentIncidentCoordinates,
 }) => {
   const [displayedVessels, setDisplayedVessels] = useState<Vessel[]>(vessels);
@@ -138,6 +140,31 @@ export const VesselAttributionView: React.FC<VesselAttributionViewProps> = ({
     setQueryLon(preset.lon);
     setPreferLive(preset.preferLive);
     handleFetchAIS(preset.lat, preset.lon, queryRadius, preset.preferLive);
+
+    if (onSelectIncident) {
+      const incidentId = preset.name === 'Gulf of Kutch'
+        ? 'SPILL_004'
+        : (preset.name === 'Chennai Port' ? 'SPILL_002' : (preset.name === 'Kochi Malabar' ? 'SPILL_003' : 'OCN-042'));
+      onSelectIncident({
+        id: incidentId,
+        code: incidentId,
+        name: `${preset.label} Spill Investigation`,
+        locationName: `${preset.label} (${preset.lat}°N, ${preset.lon}°E)`,
+        coordinates: [preset.lat, preset.lon],
+        detectedAt: '07 Sep 2026 04:32 UTC',
+        estimatedAgeHours: '4.5 hours',
+        slickAreaKm2: preset.name === 'Gulf of Kutch' ? 11.2 : 13.48,
+        slickPerimeterKm: 28.5,
+        confidencePercent: 96,
+        classification: 'Active Tanker Spill Investigation',
+        sensor: 'Sentinel-1 SAR',
+        status: 'UNDER INVESTIGATION',
+        priority: 'HIGH',
+        backscatterDb: -9.4,
+        model: 'SpillTheory U-Net',
+        summary: `Active oil spill detection & attribution in ${preset.label}`
+      });
+    }
   };
 
   const handleFetchAIS = async (
