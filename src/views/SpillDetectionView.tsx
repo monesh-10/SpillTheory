@@ -150,6 +150,9 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
   const isCleanOcean = realResult
     ? (realResult.status === 'clean_ocean' || realResult.num_sources === 0)
     : false;
+  const isDual = realResult
+    ? (realResult.num_sources === 2 || realResult.topology === 'DUAL_MERGED')
+    : false;
   const confidenceValue = realResult
     ? (isCleanOcean ? 1.0 : Math.round((realResult.unet_analysis?.confidence || 0.958) * 100))
     : 95.8;
