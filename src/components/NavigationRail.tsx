@@ -104,11 +104,50 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
   onNavigate
 }) => {
   return (
-    <aside
-      className="w-14 bg-slate-950 border-r border-slate-800/80 flex flex-col justify-between select-none z-20 shrink-0 h-full py-3 transition-colors duration-200"
-    >
-      {/* Tactical Nav Button Items */}
-      <div className="flex flex-col items-center space-y-1.5 w-full px-1.5">
+    <>
+      {/* Desktop / Tablet Vertical Navigation Rail */}
+      <aside
+        className="hidden md:flex w-14 bg-slate-950 border-r border-slate-800/80 flex-col justify-between select-none z-20 shrink-0 h-full py-3 transition-colors duration-200"
+      >
+        {/* Tactical Nav Button Items */}
+        <div className="flex flex-col items-center space-y-1.5 w-full px-1.5">
+          {TACTICAL_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.activeMatches.includes(currentPage);
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                title={item.label}
+                className={`w-full py-2 px-1 rounded-lg flex flex-col items-center justify-center transition-all duration-150 cursor-pointer ${
+                  isActive
+                    ? 'text-cyan-400 bg-cyan-500/10 font-medium'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Icon className="w-4 h-4 mb-0.5" />
+                <span className="text-[9px] tracking-tight leading-tight">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom Status: System Online */}
+        <div className="flex flex-col items-center justify-center pt-2 pb-1 border-t border-slate-800/60 text-center px-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mb-1" />
+          <span className="text-[9px] text-slate-500 font-mono leading-tight">
+            LIVE
+          </span>
+        </div>
+      </aside>
+
+      {/* Mobile Bottom Navigation Bar (< md screens) */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/80 z-40 flex items-center justify-around px-2 select-none transition-colors duration-200"
+      >
         {TACTICAL_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.activeMatches.includes(currentPage);
@@ -117,29 +156,20 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              title={item.label}
-              className={`w-full py-2 px-1 rounded-lg flex flex-col items-center justify-center transition-all duration-150 cursor-pointer ${
+              className={`flex-1 py-1.5 flex flex-col items-center justify-center transition-all cursor-pointer ${
                 isActive
-                  ? 'text-cyan-400 bg-cyan-500/10 font-medium'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  ? 'text-cyan-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Icon className="w-4 h-4 mb-0.5" />
-              <span className="text-[9px] tracking-tight leading-tight">
+              <span className="text-[9.5px] font-mono leading-tight">
                 {item.label}
               </span>
             </button>
           );
         })}
-      </div>
-
-      {/* Bottom Status: System Online */}
-      <div className="flex flex-col items-center justify-center pt-2 pb-1 border-t border-slate-800/60 text-center px-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mb-1" />
-        <span className="text-[9px] text-slate-500 font-mono leading-tight">
-          LIVE
-        </span>
-      </div>
-    </aside>
+      </nav>
+    </>
   );
 };

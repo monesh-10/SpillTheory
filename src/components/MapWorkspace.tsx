@@ -1444,7 +1444,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       </div>
 
       {/* Floating Fleet Visibility & Ship Filter Bar */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-[#070F1D]/95 backdrop-blur-md border border-[#162D4A] rounded-xl px-2.5 py-1.5 shadow-2xl max-w-[calc(100%-140px)] overflow-x-auto custom-scrollbar">
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-[#070F1D]/95 backdrop-blur-md border border-[#162D4A] rounded-xl px-2 sm:px-2.5 py-1.5 shadow-2xl max-w-[calc(100%-80px)] sm:max-w-[calc(100%-140px)] overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-1.5 pr-2 border-r border-[#162D4A] shrink-0">
           <Ship className="w-3.5 h-3.5 text-cyan-400" />
           <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-300">
@@ -1523,7 +1523,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         const isHidden = hiddenVesselIds.includes(displayVessel.id);
 
         return (
-          <div className="absolute top-14 left-3 z-20 bg-[#070F1D]/95 border border-[#00E5FF]/40 rounded-xl shadow-2xl p-3 text-xs font-sans max-w-sm animate-in fade-in backdrop-blur-md">
+          <div className="absolute top-14 left-3 right-3 sm:right-auto z-20 bg-[#070F1D]/95 border border-[#00E5FF]/40 rounded-xl shadow-2xl p-3 text-xs font-sans max-w-sm animate-in fade-in backdrop-blur-md">
             <div className="flex items-start justify-between gap-3 border-b border-[#162D4A] pb-2">
               <div>
                 <div className="font-bold text-xs uppercase tracking-wider text-white flex items-center gap-1.5">

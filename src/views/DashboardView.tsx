@@ -316,15 +316,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        {layoutMode === 'map' && (
-          <button
-            onClick={() => setInspectorOpen(false)}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-900 cursor-pointer"
-            title="Close Panel"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          onClick={() => setInspectorOpen(false)}
+          className={`p-1 rounded text-slate-400 hover:text-white hover:bg-slate-900 cursor-pointer ${layoutMode === 'map' ? 'block' : 'lg:hidden block'}`}
+          title="Close Forensics Panel"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Tab Content Container */}
@@ -782,7 +780,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Streamlined 4D Simulation Time Dock Component
   const renderTimeDock = () => (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-[94%] max-w-2xl bg-slate-950/85 backdrop-blur-md border border-slate-800 rounded-xl p-2.5 shadow-xl space-y-2">
+    <div className="absolute bottom-16 md:bottom-4 left-1/2 -translate-x-1/2 z-20 w-[95%] max-w-2xl bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-xl p-2 sm:p-2.5 shadow-xl space-y-1.5 sm:space-y-2">
       {/* Compact Top Row: Play/Pause, Scrubber, Time Readout */}
       <div className="flex items-center gap-2.5 text-xs">
         <button
@@ -1130,7 +1128,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex-1 flex overflow-hidden relative">
         {/* MAP CANVAS VIEWPORT */}
         <div className={`flex flex-col relative h-full transition-all duration-300 ${
-          layoutMode === 'split' && inspectorOpen ? 'w-[58%]' : (layoutMode === 'briefing' ? 'w-[58%]' : 'w-full')
+          layoutMode === 'split' && inspectorOpen ? 'w-full lg:w-[58%]' : (layoutMode === 'briefing' ? 'w-full lg:w-[58%]' : 'w-full')
         }`}>
           <div className="flex-1 relative w-full h-full min-h-0">
             <MapWorkspace
@@ -1160,16 +1158,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {renderTimeDock()}
         </div>
 
-        {/* SPLIT / BRIEFING MODE SIDEBAR INSPECTOR */}
+        {/* SPLIT / BRIEFING MODE SIDEBAR INSPECTOR (Desktop: lg+) */}
         {(layoutMode === 'split' || layoutMode === 'briefing') && inspectorOpen && (
-          <div className="w-[42%] h-full flex flex-col min-w-0 transition-all duration-300">
+          <div className="hidden lg:flex w-[42%] h-full flex-col min-w-0 transition-all duration-300">
             {renderInspector()}
           </div>
         )}
 
-        {/* MAP FOCUS OVERLAY DRAWER (When inspector is toggled in Map mode) */}
+        {/* MOBILE / TABLET OVERLAY DRAWER (When forensics is open on mobile or tablet) */}
+        {inspectorOpen && (
+          <div className="lg:hidden absolute right-0 top-0 bottom-0 w-full sm:w-[400px] z-30 shadow-2xl animate-in slide-in-from-right-4 border-l border-slate-800">
+            {renderInspector()}
+          </div>
+        )}
+
+        {/* MAP FOCUS OVERLAY DRAWER (Desktop map focus mode) */}
         {layoutMode === 'map' && inspectorOpen && (
-          <div className="absolute right-0 top-0 bottom-0 w-96 lg:w-[420px] z-30 shadow-2xl animate-in slide-in-from-right-4">
+          <div className="hidden lg:block absolute right-0 top-0 bottom-0 w-96 lg:w-[420px] z-30 shadow-2xl animate-in slide-in-from-right-4 border-l border-slate-800">
             {renderInspector()}
           </div>
         )}

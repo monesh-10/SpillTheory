@@ -162,7 +162,7 @@ export const App: React.FC = () => {
         )}
 
         {/* Dynamic Operational Page Views */}
-        <main className="flex-1 h-full overflow-hidden relative bg-slate-50 dark:bg-[#0B0F17] transition-colors duration-200">
+        <main className={`flex-1 h-full overflow-hidden relative bg-slate-50 dark:bg-[#0B0F17] transition-colors duration-200 ${currentPage !== 'landing' ? 'pb-14 md:pb-0' : ''}`}>
           {currentPage === 'landing' && (
             <LandingPageView
               onEnterApp={() => setCurrentPage('overview')}

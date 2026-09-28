@@ -12,12 +12,157 @@
   body {
     background-color: #050B14;
     color: #F8FAFC;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::selection {
     background-color: #00E5FF;
     color: #050B14;
   }
+}
+
+/* ========================================================= */
+/* Comprehensive Global Light Mode Theme Overrides           */
+/* ========================================================= */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+/* Background surfaces */
+html:not(.dark) .bg-\[\#050B14\],
+html:not(.dark) .bg-\[\#0B0F17\],
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-navy-950,
+html:not(.dark) .bg-navy-900,
+html:not(.dark) .bg-navy-850 {
+  background-color: #F8FAFC !important;
+  color: #0F172A;
+}
+
+html:not(.dark) .bg-\[\#070F1D\],
+html:not(.dark) .bg-\[\#0B1523\],
+html:not(.dark) .bg-\[\#0E1B2C\],
+html:not(.dark) .bg-navy-800,
+html:not(.dark) .bg-navy-750,
+html:not(.dark) .bg-navy-700,
+html:not(.dark) .bg-slate-900,
+html:not(.dark) .bg-slate-900\/80,
+html:not(.dark) .bg-slate-900\/90,
+html:not(.dark) .bg-slate-900\/95,
+html:not(.dark) .bg-slate-900\/60,
+html:not(.dark) .bg-slate-900\/50,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/85,
+html:not(.dark) .bg-slate-950\/90,
+html:not(.dark) .bg-slate-950\/95,
+html:not(.dark) .bg-\[\#070F1D\]\/95,
+html:not(.dark) .bg-\[\#070F1D\]\/90,
+html:not(.dark) .bg-\[\#0B1523\]\/60 {
+  background-color: #FFFFFF !important;
+}
+
+/* Clean structural borders */
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-800\/60,
+html:not(.dark) .border-slate-700,
+html:not(.dark) .border-\[\#162D4A\],
+html:not(.dark) .border-\[\#162D4A\]\/40,
+html:not(.dark) .border-\[\#162D4A\]\/80,
+html:not(.dark) .border-edge-dark,
+html:not(.dark) .border-edge-mid,
+html:not(.dark) .border-edge-light {
+  border-color: #E2E8F0 !important;
+}
+
+/* Typography contrast */
+html:not(.dark) .text-white,
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-slate-200,
+html:not(.dark) .text-ink-primary {
+  color: #0F172A !important;
+}
+
+html:not(.dark) .text-slate-300,
+html:not(.dark) .text-slate-400,
+html:not(.dark) .text-ink-secondary {
+  color: #475569 !important;
+}
+
+html:not(.dark) .text-slate-500,
+html:not(.dark) .text-ink-muted {
+  color: #64748B !important;
+}
+
+html:not(.dark) .text-slate-600 {
+  color: #94A3B8 !important;
+}
+
+/* Hover surfaces */
+html:not(.dark) .hover\:bg-slate-800:hover,
+html:not(.dark) .hover\:bg-slate-800\/80:hover,
+html:not(.dark) .hover\:bg-slate-900:hover,
+html:not(.dark) .hover\:bg-slate-900\/60:hover,
+html:not(.dark) .hover\:bg-\[\#0E1B2C\]:hover {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+}
+
+/* Status & semantic badges */
+html:not(.dark) .bg-cyan-950,
+html:not(.dark) .bg-cyan-950\/80,
+html:not(.dark) .bg-cyan-950\/70,
+html:not(.dark) .bg-cyan-500\/10,
+html:not(.dark) .bg-cyan-500\/15,
+html:not(.dark) .bg-cyan-500\/20 {
+  background-color: #E0F2FE !important;
+  color: #0284C7 !important;
+  border-color: #BAE6FD !important;
+}
+
+html:not(.dark) .bg-rose-950,
+html:not(.dark) .bg-rose-950\/80,
+html:not(.dark) .bg-rose-950\/60,
+html:not(.dark) .bg-rose-500\/10,
+html:not(.dark) .bg-rose-500\/20 {
+  background-color: #FFE4E6 !important;
+  color: #E11D48 !important;
+  border-color: #FECDD3 !important;
+}
+
+html:not(.dark) .bg-emerald-950,
+html:not(.dark) .bg-emerald-950\/80,
+html:not(.dark) .bg-emerald-500\/10,
+html:not(.dark) .bg-emerald-500\/20 {
+  background-color: #D1FAE5 !important;
+  color: #059669 !important;
+  border-color: #A7F3D0 !important;
+}
+
+html:not(.dark) .bg-amber-950,
+html:not(.dark) .bg-amber-950\/80,
+html:not(.dark) .bg-amber-500\/10,
+html:not(.dark) .bg-amber-500\/20 {
+  background-color: #FEF3C7 !important;
+  color: #D97706 !important;
+  border-color: #FDE68A !important;
+}
+
+html:not(.dark) .bg-purple-500\/10,
+html:not(.dark) .bg-purple-500\/20 {
+  background-color: #F3E8FF !important;
+  color: #7E22CE !important;
+  border-color: #E9D5FF !important;
+}
+
+html:not(.dark) ::selection {
+  background-color: #0284C7;
+  color: #FFFFFF;
 }
 
 /* ========================================================= */

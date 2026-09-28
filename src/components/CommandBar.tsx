@@ -67,9 +67,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
   }, []);
 
   return (
-    <header className="h-11 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 flex items-center justify-between select-none z-30 sticky top-0 text-slate-100 font-sans transition-colors duration-200">
+    <header className="h-11 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-2 sm:px-4 flex items-center justify-between select-none z-30 sticky top-0 text-slate-100 font-sans transition-colors duration-200">
       {/* Left: Brand Logo + System Status */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <SpillTheoryLogo size="md" showWordmark={true} />
 
         <div className="h-3 w-px bg-slate-800 hidden sm:block" />
@@ -88,11 +88,11 @@ export const CommandBar: React.FC<CommandBarProps> = ({
       <div className="relative">
         <button
           onClick={() => setIncidentMenuOpen(!incidentMenuOpen)}
-          className="flex items-center gap-2 px-3 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 text-xs text-slate-200 transition-colors"
+          className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-md bg-slate-900/80 hover:bg-slate-800/80 border border-slate-800 text-xs text-slate-200 transition-colors"
         >
-          <span className="text-slate-400 text-[11px]">Incident:</span>
-          <span className="font-semibold text-cyan-400 font-mono">{currentIncident.id}</span>
-          <span className="text-slate-400 text-[11px] hidden sm:inline">{currentIncident.name.split('-')[0]}</span>
+          <span className="text-slate-400 text-[11px] hidden md:inline">Incident:</span>
+          <span className="font-semibold text-cyan-400 font-mono text-[11px] sm:text-xs">{currentIncident.id}</span>
+          <span className="text-slate-400 text-[11px] hidden lg:inline">{currentIncident.name.split('-')[0]}</span>
           <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${incidentMenuOpen ? 'rotate-180' : ''}`} />
         </button>
 
@@ -157,10 +157,11 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         {/* Primary Demo Action */}
         <button
           onClick={onRunFullInvestigation}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-md bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
         >
           <Sparkles className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-          <span>Investigation Demo</span>
+          <span className="hidden sm:inline">Investigation Demo</span>
+          <span className="sm:hidden">Demo</span>
         </button>
 
         {/* Notification Bell */}
