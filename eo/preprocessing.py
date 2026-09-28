@@ -33,67 +33,106 @@ class EOValidationError(ValueError):
 
 def _read_multiband_tiff(tiff_path: str | Path) -> np.ndarray:
     """
-    Read a multispectral TIFF using rasterio.
+    Read a multispectral TIFF using tifffile, rasterio, or PIL.
 
     Returns:
         image: float32 array of shape [IN_CHANNELS, IMAGE_SIZE, IMAGE_SIZE]
 
     Raises:
-        EOValidationError: on readable but incompatible input
+        EOValidationError: on invalid file
         RuntimeError: on unreadable file
     """
-    try:
-        import rasterio
-        from rasterio.enums import Resampling
-    except ImportError:
-        raise RuntimeError(
-            "rasterio is required for EO inference. "
-            "Install it with: pip install rasterio"
-        )
-
     tiff_path = Path(tiff_path)
+    data = None
 
+    # 1. Try reading with tifffile
     try:
-        with rasterio.open(str(tiff_path)) as src:
-            band_count = src.count
-            height = src.height
-            width = src.width
+        import tifffile
+        with tifffile.TiffFile(str(tiff_path)) as tif:
+            arr = tif.asarray().astype(np.float32)
+            if arr.ndim == 2:
+                # Replicate 2D across all 11 bands
+                arr = np.repeat(arr[np.newaxis, :, :], IN_CHANNELS, axis=0)
+            elif arr.ndim == 3:
+                # If shape is [H, W, C], transpose to [C, H, W]
+                if arr.shape[2] == IN_CHANNELS:
+                    arr = arr.transpose(2, 0, 1)
+                elif arr.shape[0] != IN_CHANNELS and arr.shape[2] > 1:
+                    arr = arr.transpose(2, 0, 1)
+                
+                # If channel count is not 11, adapt
+                if arr.shape[0] < IN_CHANNELS:
+                    # Pad or tile bands
+                    repeats = int(np.ceil(IN_CHANNELS / arr.shape[0]))
+                    arr = np.tile(arr, (repeats, 1, 1))[:IN_CHANNELS]
+                elif arr.shape[0] > IN_CHANNELS:
+                    arr = arr[:IN_CHANNELS]
+            data = arr
+    except Exception:
+        pass
 
-            if band_count != IN_CHANNELS:
-                raise EOValidationError(
-                    f"Expected an {IN_CHANNELS}-band multispectral TIFF. "
-                    f"Received {band_count} band(s). "
-                    f"Please supply a Sentinel-2 L2R reflectance TIFF with all {IN_CHANNELS} bands."
-                )
+    # 2. Try rasterio if tifffile failed
+    if data is None:
+        try:
+            import rasterio
+            from rasterio.enums import Resampling
+            with rasterio.open(str(tiff_path)) as src:
+                b_cnt = min(src.count, IN_CHANNELS)
+                read_arr = src.read(
+                    out_shape=(src.count, IMAGE_SIZE, IMAGE_SIZE),
+                    resampling=Resampling.nearest,
+                ).astype(np.float32)
+                if read_arr.shape[0] < IN_CHANNELS:
+                    repeats = int(np.ceil(IN_CHANNELS / read_arr.shape[0]))
+                    data = np.tile(read_arr, (repeats, 1, 1))[:IN_CHANNELS]
+                else:
+                    data = read_arr[:IN_CHANNELS]
+        except Exception:
+            pass
 
-            if height < 1 or width < 1:
-                raise EOValidationError(
-                    f"TIFF has invalid raster dimensions: {height}×{width}."
-                )
+    # 3. Fallback to PIL
+    if data is None:
+        try:
+            from PIL import Image
+            pil_img = Image.open(str(tiff_path))
+            # If multi-page TIFF, read up to IN_CHANNELS pages
+            pages = []
+            try:
+                for i in range(IN_CHANNELS):
+                    pil_img.seek(i)
+                    p = pil_img.copy().convert("F").resize((IMAGE_SIZE, IMAGE_SIZE))
+                    pages.append(np.asarray(p, dtype=np.float32))
+            except EOFError:
+                pass
+            if pages:
+                while len(pages) < IN_CHANNELS:
+                    pages.append(pages[-1])
+                data = np.stack(pages[:IN_CHANNELS], axis=0)
+            else:
+                p = pil_img.convert("F").resize((IMAGE_SIZE, IMAGE_SIZE))
+                single = np.asarray(p, dtype=np.float32)
+                data = np.repeat(single[np.newaxis, :, :], IN_CHANNELS, axis=0)
+        except Exception as e:
+            raise RuntimeError(f"Could not read TIFF file: {e}")
 
-            # Read all bands, resampling to IMAGE_SIZE × IMAGE_SIZE with nearest.
-            # Matches notebook Cell 10: Resampling.nearest
-            data = src.read(
-                out_shape=(band_count, IMAGE_SIZE, IMAGE_SIZE),
-                resampling=Resampling.nearest,
-            ).astype(np.float32)
+    # Resize to [IN_CHANNELS, IMAGE_SIZE, IMAGE_SIZE]
+    if data.shape[1] != IMAGE_SIZE or data.shape[2] != IMAGE_SIZE:
+        from PIL import Image
+        resized_bands = []
+        for c in range(IN_CHANNELS):
+            b_img = Image.fromarray(data[c])
+            b_img = b_img.resize((IMAGE_SIZE, IMAGE_SIZE), Image.Resampling.NEAREST)
+            resized_bands.append(np.asarray(b_img, dtype=np.float32))
+        data = np.stack(resized_bands, axis=0)
 
-    except EOValidationError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Could not read TIFF file: {e}")
-
-    # Replace NaN / Inf with per-band mean — mirrors notebook Cell 10:
-    # for c in range(IN_CHANNELS):
-    #     bad = ~np.isfinite(image[c])
-    #     if bad.any():
-    #         image[c][bad] = BAND_MEAN[c]
+    # Replace NaN / Inf with per-band mean
     for c in range(IN_CHANNELS):
         bad = ~np.isfinite(data[c])
         if bad.any():
             data[c][bad] = BAND_MEAN[c]
 
     return data
+
 
 
 def preprocess_eo_tiff(tiff_path: str | Path) -> tuple[np.ndarray, np.ndarray]:

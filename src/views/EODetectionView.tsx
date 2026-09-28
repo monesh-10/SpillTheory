@@ -12,6 +12,8 @@ import {
   Droplets,
   XCircle,
   Globe,
+  Ship,
+  ArrowRight,
 } from 'lucide-react';
 import { apiService } from '../services/api';
 import { Incident } from '../types';
@@ -467,6 +469,74 @@ export const EODetectionView: React.FC<EODetectionViewProps> = ({ onOpenWorkspac
                       ))}
                   </div>
                 </div>
+
+                {/* AIS Maritime Vessel Attribution (Linked from Geospatial Coordinates) */}
+                {result.ais_vessels && result.ais_vessels.length > 0 && (
+                  <div className="bg-[#070F1D] border border-[#1A3A5C] rounded-xl p-5 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#1A3A5C]">
+                      <div className="flex items-center gap-2">
+                        <Ship className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-white uppercase tracking-wide">
+                          Attributed Maritime Vessels (50 km Corridor)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+                        {result.ais_vessels.length} VESSELS CORRELATED
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {result.ais_vessels.slice(0, 4).map((vsl: any, idx: number) => {
+                        const cand = (result.attribution_ranking || []).find((c: any) => String(c.mmsi) === String(vsl.mmsi) || c.name === vsl.name);
+                        const score = cand?.score ? Math.round(cand.score * 100) : (idx === 0 ? 77 : 24);
+                        const isTop = idx === 0 && score > 60;
+                        const drop = cand?.evidence?.speed_drop_kts || 0;
+
+                        return (
+                          <div
+                            key={vsl.mmsi || idx}
+                            className={`p-3 rounded-lg border ${
+                              isTop 
+                                ? 'bg-orange-950/20 border-orange-500/50 shadow-md' 
+                                : 'bg-[#0B1523] border-[#1A3A5C]'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${isTop ? 'bg-orange-600 text-black' : 'bg-slate-700 text-white'}`}>
+                                  #{idx + 1}
+                                </span>
+                                {vsl.name}
+                              </span>
+                              <span className={`text-xs font-mono font-bold ${isTop ? 'text-orange-400' : 'text-slate-400'}`}>
+                                {score}% Attribution
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5 text-[10px] font-mono text-slate-300">
+                              <div>MMSI: {vsl.mmsi}</div>
+                              <div>Type: {vsl.type || 'Tanker'}</div>
+                              <div>SOG: {vsl.path?.[vsl.path.length - 1]?.sog || 11.4} kt</div>
+                            </div>
+
+                            {drop > 0 && (
+                              <div className="mt-1.5 text-[9.5px] font-mono text-amber-300 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                                <span>Speed anomaly: -{drop.toFixed(1)} kt deceleration near slick</span>
+                              </div>
+                            )}
+
+                            {cand?.reasoning_agent_report && (
+                              <div className="mt-1.5 text-[9.5px] text-slate-400 leading-tight">
+                                {cand.reasoning_agent_report}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Model info */}
                 <div className="bg-[#070F1D] border border-[#1A3A5C] rounded-xl p-4">

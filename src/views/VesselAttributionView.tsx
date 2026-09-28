@@ -142,16 +142,14 @@ export const VesselAttributionView: React.FC<VesselAttributionViewProps> = ({
     handleFetchAIS(preset.lat, preset.lon, queryRadius, preset.preferLive);
 
     if (onSelectIncident) {
-      const incidentId = preset.name === 'Gulf of Kutch'
-        ? 'SPILL_004'
-        : (preset.name === 'Chennai Port' ? 'SPILL_002' : (preset.name === 'Kochi Malabar' ? 'SPILL_003' : 'OCN-042'));
+      const incidentId = `SP-${preset.name.replace(/\s+/g, '-').toUpperCase()}-${Date.now().toString().slice(-4)}`;
       onSelectIncident({
         id: incidentId,
         code: incidentId,
         name: `${preset.label} Spill Investigation`,
         locationName: `${preset.label} (${preset.lat}°N, ${preset.lon}°E)`,
         coordinates: [preset.lat, preset.lon],
-        detectedAt: '07 Sep 2026 04:32 UTC',
+        detectedAt: new Date().toISOString(),
         estimatedAgeHours: '4.5 hours',
         slickAreaKm2: preset.name === 'Gulf of Kutch' ? 11.2 : 13.48,
         slickPerimeterKm: 28.5,

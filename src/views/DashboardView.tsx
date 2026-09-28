@@ -22,7 +22,11 @@ import {
   LayoutGrid,
   Info,
   ShieldAlert,
-  X
+  X,
+  Eye,
+  EyeOff,
+  Target,
+  Crosshair
 } from 'lucide-react';
 import { MapWorkspace } from '../components/MapWorkspace';
 import { EvidenceCompareModal } from '../components/EvidenceCompareModal';
@@ -36,7 +40,7 @@ import {
   MapLayerState,
   SARDetectionResult 
 } from '../types';
-import { PRIMARY_INCIDENT, SINGLE_SPILL_INCIDENT } from '../data/mockData';
+import { PRIMARY_INCIDENT } from '../data/mockData';
 import { NavigationPage } from '../components/NavigationRail';
 
 interface DashboardViewProps {
@@ -101,7 +105,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [layersDropdownOpen, setLayersDropdownOpen] = useState<boolean>(false);
   const [showNarrativeLog, setShowNarrativeLog] = useState<boolean>(false);
 
-  const isDualSpillScenario = false;
+  // Dynamic scenario mode toggle (Single Ship vs Dual Ship)
+  const [scenarioMode, setScenarioMode] = useState<'single' | 'dual'>(() => {
+    const c = (incident?.classification || '').toLowerCase();
+    const n = (incident?.name || '').toLowerCase();
+    return (c.includes('dual') || n.includes('dual')) ? 'dual' : 'single';
+  });
+
+  useEffect(() => {
+    const c = (incident?.classification || '').toLowerCase();
+    const n = (incident?.name || '').toLowerCase();
+    if (c.includes('dual') || n.includes('dual')) {
+      setScenarioMode('dual');
+    } else if (c.includes('single') || n.includes('single')) {
+      setScenarioMode('single');
+    }
+  }, [incident?.id, incident?.classification, incident?.name]);
+
+  const isDualSpillScenario = scenarioMode === 'dual';
+
+  // State for hiding specific vessels on the 4D Map
+  const [hiddenVesselIds, setHiddenVesselIds] = useState<string[]>([]);
+
+  const handleToggleHideVessel = (id: string) => {
+    setHiddenVesselIds(prev =>
+      prev.includes(id) ? prev.filter(vId => vId !== id) : [...prev, id]
+    );
+  };
+
+  const handleSoloVessel = (id: string) => {
+    const others = vessels.filter(v => v.id !== id).map(v => v.id);
+    const areAllOthersHidden = others.length > 0 && others.every(oId => hiddenVesselIds.includes(oId));
+    if (areAllOthersHidden) {
+      setHiddenVesselIds([]);
+    } else {
+      setHiddenVesselIds(others);
+    }
+  };
+
+  const handleShowAllVessels = () => {
+    setHiddenVesselIds([]);
+  };
+
   const activeVessel = selectedVessel || vessels[0];
 
   const toggleAction = (id: string) => {
@@ -357,13 +402,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
 
-                <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-medium uppercase ${
-                  activeVessel.rank === 1
-                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                    : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
-                }`}>
-                  {activeVessel.investigationPriority} Priority
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-medium uppercase ${
+                    activeVessel.rank === 1
+                      ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                      : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                  }`}>
+                    {activeVessel.investigationPriority} Priority
+                  </span>
+
+                  <button
+                    onClick={() => handleToggleHideVessel(activeVessel.id)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border transition-all cursor-pointer ${
+                      hiddenVesselIds.includes(activeVessel.id)
+                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/30'
+                    }`}
+                    title={hiddenVesselIds.includes(activeVessel.id) ? "Ship is hidden on map (Click to show)" : "Hide ship on map"}
+                  >
+                    {hiddenVesselIds.includes(activeVessel.id) ? (
+                      <>
+                        <EyeOff className="w-3 h-3 text-rose-400" />
+                        <span>Hidden</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-3 h-3 text-cyan-400" />
+                        <span>Hide</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleSoloVessel(activeVessel.id)}
+                    className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400 hover:text-cyan-300 hover:border-cyan-500/30 transition-all cursor-pointer flex items-center gap-1"
+                    title="Solo this ship on the map (hide all other ships)"
+                  >
+                    <Target className="w-3 h-3 text-cyan-400" />
+                    <span>Solo</span>
+                  </button>
+                </div>
               </div>
 
               {/* Commercial Maritime Vessel Photo */}
@@ -483,26 +561,81 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            {/* Compact Candidate Vessels in Sector */}
+            {/* Candidate Vessels in Sector with Hide/Show and Solo toggles */}
             <div className="space-y-1.5 pt-1">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
-                Other Candidate Vessels
+              <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-slate-400">
+                <span>Other Candidate Vessels ({vessels.filter(v => v.id !== activeVessel.id).length})</span>
+                {hiddenVesselIds.length > 0 && (
+                  <button
+                    onClick={handleShowAllVessels}
+                    className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-mono text-[9.5px] normal-case cursor-pointer"
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Show all ({hiddenVesselIds.length} hidden)</span>
+                  </button>
+                )}
               </div>
-              {vessels.filter(v => v.id !== activeVessel.id).slice(0, 2).map(other => (
-                <button
-                  key={other.id}
-                  onClick={() => onSelectVessel(other)}
-                  className="w-full text-left p-2.5 rounded-lg bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 flex items-center justify-between text-xs transition-colors cursor-pointer"
-                >
-                  <div>
-                    <span className="font-medium text-slate-200">{other.name}</span>
-                    <span className="text-[10px] text-slate-500 block">{other.type} · {other.distanceFromOriginKm} km</span>
+              {vessels.filter(v => v.id !== activeVessel.id).map(other => {
+                const isHidden = hiddenVesselIds.includes(other.id);
+                return (
+                  <div
+                    key={other.id}
+                    className={`w-full p-2 rounded-lg border flex items-center justify-between text-xs transition-all ${
+                      isHidden
+                        ? 'bg-slate-950/40 border-slate-900 opacity-60'
+                        : 'bg-slate-900/60 hover:bg-slate-800/80 border-slate-800'
+                    }`}
+                  >
+                    <button
+                      onClick={() => onSelectVessel(other)}
+                      className="text-left flex-1 min-w-0 pr-2 cursor-pointer"
+                      title="Click to inspect this vessel"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${isHidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                          {other.name}
+                        </span>
+                        {isHidden && (
+                          <span className="text-[8.5px] font-mono px-1 py-0.2 rounded bg-rose-950/60 border border-rose-500/30 text-rose-400 font-bold">
+                            HIDDEN
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 block truncate">
+                        {other.type} · {other.distanceFromOriginKm} km · {other.attributionScore}% Suspect
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleHideVessel(other.id);
+                        }}
+                        className={`p-1.5 rounded border transition-colors cursor-pointer ${
+                          isHidden
+                            ? 'bg-rose-500/20 border-rose-500/40 text-rose-300 hover:bg-rose-500/30'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                        }`}
+                        title={isHidden ? `Unhide ${other.name} on map` : `Hide ${other.name} from map`}
+                      >
+                        {isHidden ? <EyeOff className="w-3.5 h-3.5 text-rose-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSoloVessel(other.id);
+                        }}
+                        className="p-1.5 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/30 transition-colors cursor-pointer"
+                        title={`Solo ${other.name} (hide other ships)`}
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-xs font-mono font-medium text-slate-400">
-                    {other.attributionScore}%
-                  </span>
-                </button>
-              ))}
+                );
+              })}
             </div>
 
             {/* Primary Action Button */}
@@ -761,8 +894,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center bg-slate-900/80 p-0.5 rounded-lg border border-slate-800 shrink-0">
             <button
               onClick={() => {
-                const dualInc = allIncidents.find(i => i.id === 'OCN-042' || (!i.name.includes('Single') && i.id !== 'OCN-043')) || PRIMARY_INCIDENT;
-                if (onSelectIncident) onSelectIncident(dualInc);
+                setScenarioMode('dual');
+                if (onSelectIncident) {
+                  onSelectIncident({
+                    ...incident,
+                    classification: 'Dual-Source Petroleum Coalescence (2 Ships Merged)',
+                    name: incident.name.includes('Single')
+                      ? incident.name.replace(/Single[- ]Source/gi, 'Dual-Source').replace(/Single/gi, 'Dual-Source')
+                      : (incident.name.includes('Dual') ? incident.name : `${incident.name} (Dual-Source)`)
+                  });
+                }
               }}
               className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 isDualSpillScenario
@@ -775,8 +916,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
             <button
               onClick={() => {
-                const singleInc = allIncidents.find(i => i.id === 'OCN-043' || i.name.includes('Single')) || SINGLE_SPILL_INCIDENT;
-                if (onSelectIncident) onSelectIncident(singleInc);
+                setScenarioMode('single');
+                if (onSelectIncident) {
+                  onSelectIncident({
+                    ...incident,
+                    classification: 'Single Point-Source Petroleum Slick (1 Ship)',
+                    name: incident.name.includes('Dual')
+                      ? incident.name.replace(/Dual[- ]Source/gi, 'Single-Source').replace(/Dual/gi, 'Single-Source')
+                      : incident.name
+                  });
+                }
               }}
               className={`px-2.5 py-1 rounded-md text-[10.5px] font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
                 !isDualSpillScenario
@@ -999,6 +1148,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               onToggleLayer={onToggleLayer}
               onOpenSlickDetails={() => setIsSARCompareModalOpen(true)}
               theme={theme}
+              isDualSpillScenario={isDualSpillScenario}
+              hiddenVesselIds={hiddenVesselIds}
+              onToggleHideVessel={handleToggleHideVessel}
+              onShowAllVessels={handleShowAllVessels}
+              onSoloVessel={handleSoloVessel}
             />
           </div>
 

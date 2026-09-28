@@ -43,7 +43,8 @@ _OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/api/detect-eo")
 async def detect_eo(
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
+    demo_filename: str = Form(None),
     center_lat: float = Form(None),
     center_lon: float = Form(None),
     origin_lat: float = Form(None),
@@ -52,7 +53,7 @@ async def detect_eo(
     """
     EO multispectral segmentation endpoint with unified Digital Twin integration.
 
-    Accepts a single 11-band TIFF file and returns a 15-class
+    Accepts an uploaded TIFF file or a preloaded demo_filename and returns a 15-class
     semantic segmentation result. If an oil spill is detected, it extracts
     geospatial coordinates from the TIFF metadata and registers an identical
     downstream Digital Twin scenario (reverse backtracking, dynamic AIS ships,
@@ -66,27 +67,39 @@ async def detect_eo(
     from backend.scenario_builder import build_and_register_spill_scenario, get_location_name
 
     # ------------------------------------------------------------------
-    # 1. Basic extension check on the incoming filename
-    # ------------------------------------------------------------------
-    raw_filename = (file.filename or "upload").lower()
-    if not (raw_filename.endswith(".tif") or raw_filename.endswith(".tiff")):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Invalid file format. Expected a TIFF file (.tif or .tiff). "
-                f"Received: '{file.filename or 'unknown'}'"
-            ),
-        )
-
-    # ------------------------------------------------------------------
-    # 2. Write to a fixed temp path (no client-supplied paths)
+    # 1. Resolve source file (UploadFile or demo_filename)
     # ------------------------------------------------------------------
     temp_path = _BACKEND_DIR / "_temp_eo_upload.tiff"
-    try:
-        with open(temp_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
+
+    if demo_filename:
+        # Validate filename to prevent path traversal
+        clean_name = Path(demo_filename).name
+        demo_src = _REPO_ROOT / "demo_data" / clean_name
+        if not demo_src.exists():
+            demo_src = _REPO_ROOT / "data" / clean_name
+        if not demo_src.exists():
+            raise HTTPException(status_code=404, detail=f"Demo EO file '{clean_name}' not found.")
+        try:
+            shutil.copyfile(demo_src, temp_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to copy demo EO file: {e}")
+    elif file is not None:
+        raw_filename = (file.filename or "upload").lower()
+        if not (raw_filename.endswith(".tif") or raw_filename.endswith(".tiff") or raw_filename.endswith(".png") or raw_filename.endswith(".jpg")):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Invalid file format. Expected a TIFF/image file. "
+                    f"Received: '{file.filename or 'unknown'}'"
+                ),
+            )
+        try:
+            with open(temp_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {e}")
+    else:
+        raise HTTPException(status_code=400, detail="Either 'file' or 'demo_filename' must be provided.")
 
     try:
         # ------------------------------------------------------------------
@@ -170,6 +183,7 @@ async def detect_eo(
                 km_span=geo_meta["km_span"]
             )
 
+            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             scenario_payload = build_and_register_spill_scenario(
                 spill_id=new_spill_id,
                 modality="EO",
@@ -192,7 +206,7 @@ async def detect_eo(
                 km_span=geo_meta["km_span"],
                 origin_lat=origin_lat,
                 origin_lon=origin_lon,
-                detection_timestamp="2026-09-07T04:32:00Z",
+                detection_timestamp=now_iso,
                 is_dual=(num_sources == 2),
             )
             loc_str = scenario_payload["spill_event"]["location_name"]
@@ -227,6 +241,8 @@ async def detect_eo(
             "mask_url": mask_url if oil_spill_detected else None,
             "sar_metadata": scenario_payload["sar_metadata"] if scenario_payload else None,
             "authority_dispatch": scenario_payload["authority_dispatch"] if scenario_payload else None,
+            "ais_vessels": scenario_payload["ais"]["vessel_tracks"] if scenario_payload else [],
+            "attribution_ranking": scenario_payload["attribution"]["candidates"] if scenario_payload else [],
             "scenario": scenario_payload,
         })
 

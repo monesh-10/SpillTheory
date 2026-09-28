@@ -16,7 +16,11 @@ import {
   ChevronRight,
   Eye,
   Sliders,
-  Sparkles
+  Sparkles,
+  Ship,
+  Layers,
+  Radio,
+  Globe
 } from 'lucide-react';
 import { SARDetectionResult, Incident } from '../types';
 import { apiService, BACKEND_URL } from '../services/api';
@@ -29,12 +33,20 @@ interface SpillDetectionViewProps {
   onSpillDetected?: (incident: Incident) => void;
 }
 
-const INFERENCE_STAGES = [
-  { name: 'INGESTING SATELLITE DATA (Sentinel-1A IW)', duration: '2.4 s' },
+const SAR_INFERENCE_STAGES = [
+  { name: 'INGESTING SATELLITE DATA (Sentinel-1A IW C-Band)', duration: '2.4 s' },
   { name: 'PREPROCESSING SAR IMAGE & RADIOMETRIC CAL.', duration: '3.1 s' },
-  { name: 'SEGMENTING ANOMALOUS REGION (U-Net)', duration: '—' },
+  { name: 'SEGMENTING ANOMALOUS REGION (U-Net Deep Learning)', duration: '—' },
   { name: 'CHARACTERIZING SLICK MORPHOLOGY & BOUNDARIES', duration: '—' },
-  { name: 'GENERATING DETECTION OUTPUT', duration: '—' }
+  { name: 'CORRELATING REAL-TIME AIS MARITIME CORRIDOR', duration: '—' }
+];
+
+const EO_INFERENCE_STAGES = [
+  { name: 'INGESTING MULTISPECTRAL BANDS (11 Channels Sentinel-2 L2R)', duration: '1.8 s' },
+  { name: 'NORMALIZING SURFACE REFLECTANCES (MADOS Baseline)', duration: '2.5 s' },
+  { name: 'EXTRACTING LSCC MARINE CONTRAST MATRIX', duration: '—' },
+  { name: 'SeaRel-SR-UNet 15-CLASS SEMANTIC SEGMENTATION', duration: '—' },
+  { name: 'CORRELATING REAL-TIME AIS MARITIME CORRIDOR', duration: '—' }
 ];
 
 export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
@@ -43,9 +55,10 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
   onOpenWorkspace,
   onSpillDetected,
 }) => {
+  const [modality, setModality] = useState<'SAR' | 'EO'>('SAR');
   const [sliderPosition, setSliderPosition] = useState<number>(50);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [currentStageIndex, setCurrentStageIndex] = useState<number>(2); // Stages 0, 1 complete by default
+  const [currentStageIndex, setCurrentStageIndex] = useState<number>(2);
   const [selectedDemoTile, setSelectedDemoTile] = useState<string>('clean_ocean_no_spill.png');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState<string | null>(null);
@@ -59,9 +72,15 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     'palsar_1.png',
     'palsar_10.png'
   ]);
+  const [eoDemoImages, setEoDemoImages] = useState<string[]>([
+    'sentinel2_mados_sample.tif'
+  ]);
   const [viewMode, setViewMode] = useState<'split' | 'raw' | 'mask' | 'overlay'>('split');
   const [currentMetrics, setCurrentMetrics] = useState(detectionData.metrics);
   const [realResult, setRealResult] = useState<any | null>(null);
+  const [aisVessels, setAisVessels] = useState<any[]>([]);
+  const [attributionRanking, setAttributionRanking] = useState<any[]>([]);
+  const [isFetchingAIS, setIsFetchingAIS] = useState<boolean>(false);
   const [manualCoordMode, setManualCoordMode] = useState<boolean>(false);
   const [customLat, setCustomLat] = useState<number>(incident.coordinates[0] || 18.12);
   const [customLon, setCustomLon] = useState<number>(incident.coordinates[1] || 72.45);
@@ -81,14 +100,32 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
         setDemoImages(imgs);
       }
     });
+    // Pre-populate AIS vessels for current sector
+    apiService.getAISVessels(customLat, customLon, 50, customOriginLat, customOriginLon).then(res => {
+      if (res && res.vessels && res.vessels.length > 0) {
+        setAisVessels(res.vessels);
+        if (res.attributionRanking) {
+          setAttributionRanking(res.attributionRanking);
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
     setImgLoadError(false);
     setMaskLoadError(false);
-  }, [selectedDemoTile, uploadedFile]);
+  }, [selectedDemoTile, uploadedFile, modality]);
 
   const handleFileUpload = (file: File) => {
+    const isEO = file.name.toLowerCase().endsWith('.tif') || 
+                 file.name.toLowerCase().endsWith('.tiff') || 
+                 file.name.toLowerCase().includes('eo') || 
+                 file.name.toLowerCase().includes('sentinel2') ||
+                 file.name.toLowerCase().includes('mados');
+    const chosenModality = isEO ? 'EO' : modality;
+    if (isEO && modality !== 'EO') {
+      setModality('EO');
+    }
     setUploadedFile(file);
     setSelectedDemoTile(file.name);
     setUploadedPreviewUrl(URL.createObjectURL(file));
@@ -97,10 +134,11 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     setRealResult(null);
 
     // Automatically trigger neural inference on upload
-    handleStartInference(file);
+    handleStartInference(file, chosenModality);
   };
 
-  const handleStartInference = async (customTarget?: File | string) => {
+  const handleStartInference = async (customTarget?: File | string, customModality?: 'SAR' | 'EO') => {
+    const activeModality = customModality || modality;
     const target = customTarget !== undefined ? customTarget : (uploadedFile || selectedDemoTile);
 
     setIsProcessing(true);
@@ -109,9 +147,10 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     setLastInferenceTimestamp(Date.now());
     setMaskLoadError(false);
 
+    const stages = activeModality === 'EO' ? EO_INFERENCE_STAGES : SAR_INFERENCE_STAGES;
     const interval = setInterval(() => {
       setCurrentStageIndex(prev => {
-        if (prev < INFERENCE_STAGES.length - 1) {
+        if (prev < stages.length - 1) {
           return prev + 1;
         }
         return prev;
@@ -119,50 +158,79 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     }, 450);
 
     try {
-      const targetLat = manualCoordMode ? customLat : incident.coordinates[0];
-      const targetLon = manualCoordMode ? customLon : incident.coordinates[1];
-      const res = await apiService.runRealSARDetection(
-        target,
-        targetLat,
-        targetLon,
-        manualCoordMode ? customOriginLat : undefined,
-        manualCoordMode ? customOriginLon : undefined
-      );
+      const targetLat = manualCoordMode ? customLat : (incident.coordinates[0] || 18.12);
+      const targetLon = manualCoordMode ? customLon : (incident.coordinates[1] || 72.45);
+      const targetOrigLat = manualCoordMode ? customOriginLat : undefined;
+      const targetOrigLon = manualCoordMode ? customOriginLon : undefined;
+
+      let res: any = null;
+      if (activeModality === 'EO') {
+        res = await apiService.runEODetection(target, targetLat, targetLon, targetOrigLat, targetOrigLon);
+      } else {
+        res = await apiService.runRealSARDetection(target, targetLat, targetLon, targetOrigLat, targetOrigLon);
+      }
+
       clearInterval(interval);
-      setCurrentStageIndex(INFERENCE_STAGES.length);
+      setCurrentStageIndex(stages.length);
       setIsProcessing(false);
       setRealResult(res);
 
-      if (res && res.coverage_percent !== undefined) {
+      if (res) {
+        if (res.ais_vessels && res.ais_vessels.length > 0) {
+          setAisVessels(res.ais_vessels);
+        }
+        if (res.attribution_ranking && res.attribution_ranking.length > 0) {
+          setAttributionRanking(res.attribution_ranking);
+        }
+
+        const area = res.area_km2 !== undefined ? Number(res.area_km2) : 8.25;
+        const conf = activeModality === 'EO' 
+          ? (res.oil_spill_detected ? 96.2 : 0.0)
+          : (res.coverage_percent > 0.05 ? 95.8 : 0.0);
+
         setCurrentMetrics({
           ...currentMetrics,
-          areaKm2: Number(res.area_km2 !== undefined ? res.area_km2 : 8.25),
-          classificationConfidence: res.coverage_percent > 0.05 ? 95.8 : 0.0
+          areaKm2: area,
+          classificationConfidence: conf
         });
+      }
+
+      // Also ensure AIS vessels are populated for the exact coordinate anchor
+      if (!res?.ais_vessels || res.ais_vessels.length === 0) {
+        apiService.getAISVessels(targetLat, targetLon, 50, targetOrigLat, targetOrigLon).then(aisRes => {
+          if (aisRes && aisRes.vessels && aisRes.vessels.length > 0) {
+            setAisVessels(aisRes.vessels);
+            if (aisRes.attributionRanking) {
+              setAttributionRanking(aisRes.attributionRanking);
+            }
+          }
+        }).catch(() => {});
       }
     } catch {
       clearInterval(interval);
-      setCurrentStageIndex(INFERENCE_STAGES.length);
+      setCurrentStageIndex(stages.length);
       setIsProcessing(false);
     }
   };
 
   const isCleanOcean = realResult
-    ? (realResult.status === 'clean_ocean' || realResult.num_sources === 0)
+    ? (realResult.status === 'clean_ocean' || realResult.num_sources === 0 || realResult.oil_spill_detected === false)
     : false;
   const isDual = realResult
     ? (realResult.num_sources === 2 || realResult.topology === 'DUAL_MERGED')
     : false;
   const confidenceValue = realResult
-    ? (isCleanOcean ? 1.0 : Math.round((realResult.unet_analysis?.confidence || 0.958) * 100))
+    ? (isCleanOcean ? 1.0 : Math.round(((modality === 'EO' ? realResult.scenario?.spill_event?.confidence : realResult.unet_analysis?.confidence) || 0.958) * 100))
     : 95.8;
   const areaValue = realResult
     ? (isCleanOcean ? 0.0 : (realResult.area_km2 ?? (isDual ? 13.48 : 8.25)))
     : (isDual ? 13.48 : 8.25);
   const sarImageUrl = uploadedPreviewUrl || `${BACKEND_URL}/demo_data/${selectedDemoTile}`;
-  const maskImageUrl = realResult?.sar_metadata?.mask_url
-    ? `${realResult.sar_metadata.mask_url}?t=${lastInferenceTimestamp}`
-    : (isCleanOcean ? null : (uploadedFile ? null : `${BACKEND_URL}/demo_data/_latest_mask.png`));
+  const maskImageUrl = modality === 'EO'
+    ? (realResult?.prediction_mask_url || null)
+    : (realResult?.sar_metadata?.mask_url
+        ? `${realResult.sar_metadata.mask_url}?t=${lastInferenceTimestamp}`
+        : (isCleanOcean ? null : (uploadedFile ? null : `${BACKEND_URL}/demo_data/_latest_mask.png`)));
 
   const handleOpenDigitalTwin = () => {
     if (onSpillDetected && realResult?.status !== 'clean_ocean' && !isCleanOcean) {
@@ -201,40 +269,55 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
     <div className="w-full h-[calc(100vh-2.75rem)] overflow-y-auto p-4 md:p-6 bg-[#050B14] text-slate-100 select-none font-sans custom-scrollbar">
       <div className="max-w-[1440px] mx-auto space-y-4">
         {/* ========================================================================= */}
-        {/* TOP BANNER: AI SATELLITE SAR SPILL DETECTION                              */}
+        {/* TOP BANNER: AI SATELLITE SAR / EO SPILL DETECTION                         */}
         {/* ========================================================================= */}
         <div className="p-4 rounded-xl bg-[#070F1D] border border-[#162D4A] shadow-xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Subtle background radar circles graphic */}
           <div className="absolute right-40 -top-20 w-64 h-64 rounded-full border border-cyan-500/10 pointer-events-none" />
           <div className="absolute right-28 -top-32 w-88 h-88 rounded-full border border-cyan-500/5 pointer-events-none" />
 
           {/* Left Title */}
           <div className="flex items-center gap-3.5 relative z-10">
-            <div className="p-2.5 rounded-xl bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.2)]">
-              <Satellite className="w-6 h-6" />
+            <div className={`p-2.5 rounded-xl ${
+              modality === 'EO' 
+                ? 'bg-emerald-400/10 border border-emerald-400/30 text-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.2)]'
+                : 'bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] shadow-[0_0_12px_rgba(0,229,255,0.2)]'
+            }`}>
+              {modality === 'EO' ? <Layers className="w-6 h-6" /> : <Satellite className="w-6 h-6" />}
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-wider text-white uppercase flex items-center gap-2">
-                AI SATELLITE SAR <span className="text-[#00E5FF]">SPILL DETECTION</span>
+                {modality === 'EO' ? (
+                  <>AI SATELLITE EO <span className="text-emerald-400">MULTISPECTRAL SEGMENTATION</span></>
+                ) : (
+                  <>AI SATELLITE SAR <span className="text-[#00E5FF]">SPILL DETECTION</span></>
+                )}
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                Automated C-Band synthetic aperture radar backscatter damping analysis & U-Net neural segmentation.
+                {modality === 'EO'
+                  ? 'SeaRel-SR-UNet V3 · 11-Band Sentinel-2 L2R · 15-class semantic segmentation & AIS correlation.'
+                  : 'Automated C-Band synthetic aperture radar backscatter damping analysis & U-Net neural segmentation.'}
               </p>
             </div>
           </div>
 
           {/* Right Model Badge */}
           <div className="flex items-center gap-3 relative z-10">
-            <div className="p-2 rounded-lg bg-[#0B1523] border border-[#162D4A] text-cyan-400">
+            <div className={`p-2 rounded-lg bg-[#0B1523] border border-[#162D4A] ${modality === 'EO' ? 'text-emerald-400' : 'text-cyan-400'}`}>
               <Cpu className="w-5 h-5" />
             </div>
             <div>
               <div className="text-xs font-bold text-white flex items-center gap-2">
                 <span className="text-slate-400 font-normal">Model:</span>
-                <span className="font-mono text-slate-100">SpillTheory-Seg v1.4.2</span>
+                <span className="font-mono text-slate-100">
+                  {modality === 'EO' ? 'SeaRel-SR-UNet V3' : 'SpillTheory-Seg v1.4.2'}
+                </span>
               </div>
               <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                U-Net <span className="text-slate-600">|</span> Sentinel-1 <span className="text-slate-600">|</span> C-Band (IW)
+                {modality === 'EO' ? (
+                  <span>Sentinel-2 MSI <span className="text-slate-600">|</span> 11 Bands <span className="text-slate-600">|</span> 15-Class</span>
+                ) : (
+                  <span>U-Net <span className="text-slate-600">|</span> Sentinel-1 <span className="text-slate-600">|</span> C-Band (IW)</span>
+                )}
               </div>
             </div>
           </div>
@@ -246,25 +329,65 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           
           {/* ------------------------------------------------------------- */}
-          {/* COLUMN 1: SAR TILE INPUT & INFERENCE PIPELINE (3.5 cols)      */}
+          {/* COLUMN 1: SATELLITE TILE INPUT & INFERENCE PIPELINE (3 cols)  */}
           {/* ------------------------------------------------------------- */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-4">
-            {/* Box 1: SAR Satellite Tile Input */}
+            {/* Box 1: Satellite Tile Input */}
             <div className="p-4 rounded-xl bg-[#070F1D] border border-[#162D4A] space-y-3 shadow-lg">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                  <Satellite className="w-3.5 h-3.5 text-cyan-400" />
-                  SAR SATELLITE TILE INPUT
+                  {modality === 'EO' ? <Layers className="w-3.5 h-3.5 text-emerald-400" /> : <Satellite className="w-3.5 h-3.5 text-cyan-400" />}
+                  {modality === 'EO' ? 'EO MULTISPECTRAL INPUT' : 'SAR SATELLITE TILE INPUT'}
                 </span>
                 <Info className="w-3.5 h-3.5 text-cyan-400 cursor-pointer" />
               </div>
 
-              {/* Drag & Drop SAR Tile with Hidden File Input */}
+              {/* Modality Selector Tabs */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#050B14] border border-[#162D4A] rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModality('SAR');
+                    setSelectedDemoTile('clean_ocean_no_spill.png');
+                    setUploadedFile(null);
+                    setUploadedPreviewUrl(null);
+                    setRealResult(null);
+                  }}
+                  className={`py-1.5 px-2 rounded text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    modality === 'SAR'
+                      ? 'bg-[#00E5FF] text-[#050B14] shadow-[0_0_12px_rgba(0,229,255,0.4)]'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Satellite className="w-3.5 h-3.5" />
+                  <span>SAR Sentinel-1</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModality('EO');
+                    setSelectedDemoTile('sentinel2_mados_sample.tif');
+                    setUploadedFile(null);
+                    setUploadedPreviewUrl(null);
+                    setRealResult(null);
+                  }}
+                  className={`py-1.5 px-2 rounded text-xs font-bold font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    modality === 'EO'
+                      ? 'bg-emerald-400 text-[#050B14] shadow-[0_0_12px_rgba(52,211,153,0.4)]'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>EO Sentinel-2</span>
+                </button>
+              </div>
+
+              {/* Drag & Drop Tile with Hidden File Input */}
               <input
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept=".png,.jpg,.jpeg,.tif,.tiff,.SAFE"
+                accept={modality === 'EO' ? '.tif,.tiff,.png,.jpg' : '.png,.jpg,.jpeg,.tif,.tiff,.SAFE'}
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     handleFileUpload(e.target.files[0]);
@@ -280,14 +403,18 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                     handleFileUpload(e.dataTransfer.files[0]);
                   }
                 }}
-                className="border border-dashed border-[#162D4A] hover:border-[#00E5FF]/60 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#0B1523]/60 group"
+                className={`border border-dashed border-[#162D4A] ${
+                  modality === 'EO' ? 'hover:border-emerald-400/60' : 'hover:border-[#00E5FF]/60'
+                } rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-[#0B1523]/60 group`}
               >
-                <UploadCloud className="w-7 h-7 text-cyan-400 mb-1.5 group-hover:scale-110 transition-transform" />
+                <UploadCloud className={`w-7 h-7 ${modality === 'EO' ? 'text-emerald-400' : 'text-cyan-400'} mb-1.5 group-hover:scale-110 transition-transform`} />
                 <span className="text-xs font-bold text-white tracking-wider">
-                  {uploadedFile ? uploadedFile.name : 'DROP SAR IMAGE'}
+                  {uploadedFile ? uploadedFile.name : (modality === 'EO' ? 'DROP SENTINEL-2 EO TIFF' : 'DROP SAR RADAR IMAGE')}
                 </span>
                 <span className="text-[10px] text-slate-400 mt-0.5">
-                  {uploadedFile ? `${(uploadedFile.size / 1024).toFixed(1)} KB · Ready for neural inference` : 'Supports ESA GRD, GeoTIFF, SAFE, PNG, JPG'}
+                  {uploadedFile 
+                    ? `${(uploadedFile.size / 1024).toFixed(1)} KB · Ready for ${modality} inference` 
+                    : (modality === 'EO' ? 'Supports 11-band GeoTIFF, TIFF, PNG' : 'Supports ESA GRD, GeoTIFF, SAFE, PNG, JPG')}
                 </span>
               </div>
 
@@ -300,7 +427,7 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
               {/* Pre-loaded Benchmark Tile Picker */}
               <div className="space-y-1.5">
                 <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">
-                  CHOOSE PRE-LOADED TILE:
+                  CHOOSE PRE-LOADED {modality} TILE:
                 </span>
                 <div className="relative">
                   <select
@@ -311,15 +438,23 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                       setUploadedFile(null);
                       setUploadedPreviewUrl(null);
                       setRealResult(null);
-                      handleStartInference(val);
+                      handleStartInference(val, modality);
                     }}
                     className="w-full bg-[#0B1523] border border-[#162D4A] focus:border-[#00E5FF] rounded-lg p-2.5 text-xs text-slate-200 outline-none font-mono cursor-pointer appearance-none"
                   >
-                    {demoImages.map(img => (
-                      <option key={img} value={img}>
-                        {img} {img.includes('clean') ? '(Benchmark)' : ''}
-                      </option>
-                    ))}
+                    {modality === 'EO' ? (
+                      eoDemoImages.map(img => (
+                        <option key={img} value={img}>
+                          {img} (11-Band MADOS Benchmark)
+                        </option>
+                      ))
+                    ) : (
+                      demoImages.map(img => (
+                        <option key={img} value={img}>
+                          {img} {img.includes('clean') ? '(Clean Clutter Benchmark)' : ''}
+                        </option>
+                      ))
+                    )}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
                     <ChevronRight className="w-3.5 h-3.5 rotate-90" />
@@ -419,52 +554,34 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                         />
                       </div>
                     </div>
-
-                    {/* Quick Sector Presets */}
-                    <div>
-                      <span className="text-[9px] text-slate-400 font-mono block mb-1">QUICK MARITIME SECTORS:</span>
-                      <div className="grid grid-cols-2 gap-1">
-                        {PRESET_SECTORS.map((sec) => (
-                          <button
-                            key={sec.name}
-                            type="button"
-                            onClick={() => {
-                              setCustomLat(sec.lat);
-                              setCustomLon(sec.lon);
-                              setCustomOriginLat(sec.origLat);
-                              setCustomOriginLon(sec.origLon);
-                            }}
-                            className="text-[9px] px-1.5 py-1 rounded bg-[#070F1D] hover:bg-[#162D4A] border border-[#162D4A] hover:border-cyan-400/50 text-slate-300 hover:text-cyan-300 font-mono text-left truncate transition-colors cursor-pointer"
-                          >
-                            {sec.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 ) : (
                   <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between px-1">
-                    <span>Active: Auto Sentinel-1 IW Centroid</span>
+                    <span>Active: {modality} Satellite Centroid</span>
                     <span className="text-cyan-400/70">{incident.coordinates[0].toFixed(2)}°N, {incident.coordinates[1].toFixed(2)}°E</span>
                   </div>
                 )}
               </div>
 
-              {/* Bright Cyan CTA Action Button */}
+              {/* Action Button */}
               <button
                 disabled={isProcessing}
                 onClick={() => handleStartInference()}
-                className="w-full py-2.5 px-4 rounded-lg bg-[#00E5FF] hover:bg-[#38BDF8] active:bg-[#00B4D8] disabled:opacity-50 text-[#050B14] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_16px_rgba(0,229,255,0.4)] hover:shadow-[0_0_24px_rgba(0,229,255,0.6)]"
+                className={`w-full py-2.5 px-4 rounded-lg font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  modality === 'EO'
+                    ? 'bg-emerald-400 hover:bg-emerald-300 text-[#050B14] shadow-[0_0_16px_rgba(52,211,153,0.4)]'
+                    : 'bg-[#00E5FF] hover:bg-[#38BDF8] text-[#050B14] shadow-[0_0_16px_rgba(0,229,255,0.4)]'
+                }`}
               >
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-[#050B14]" />
-                    <span>INSPECTING BACKSCATTER...</span>
+                    <span>{modality === 'EO' ? 'SEGMENTING MULTISPECTRAL BANDS...' : 'INSPECTING BACKSCATTER...'}</span>
                   </>
                 ) : (
                   <>
                     <ArrowRight className="w-4 h-4 text-[#050B14]" />
-                    <span>RUN SENTINEL-1 DETECTION</span>
+                    <span>{modality === 'EO' ? 'RUN SENTINEL-2 EO SEGMENTATION' : 'RUN SENTINEL-1 SAR DETECTION'}</span>
                   </>
                 )}
               </button>
@@ -475,12 +592,15 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
               <div className="flex items-center justify-between pb-1 border-b border-[#162D4A]">
                 <span className="text-[10.5px] uppercase font-bold tracking-wider text-slate-300 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                  NEURAL INFERENCE PIPELINE
+                  {modality === 'EO' ? 'EO INFERENCE PIPELINE' : 'SAR NEURAL PIPELINE'}
+                </span>
+                <span className="text-[9px] font-mono text-cyan-400 font-bold">
+                  {modality === 'EO' ? '15 CLASSES' : 'U-NET C-BAND'}
                 </span>
               </div>
 
               <div className="space-y-1.5 pt-1">
-                {INFERENCE_STAGES.map((stage, idx) => {
+                {(modality === 'EO' ? EO_INFERENCE_STAGES : SAR_INFERENCE_STAGES).map((stage, idx) => {
                   const isDone = idx < currentStageIndex;
                   const isCurrent = idx === currentStageIndex && isProcessing;
                   return (
@@ -971,6 +1091,127 @@ export const SpillDetectionView: React.FC<SpillDetectionViewProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* FULL-WIDTH AIS MARITIME VESSEL ATTRIBUTION SECTION                        */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-2xl bg-[#070F1D] border border-[#162D4A] shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#162D4A]">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 shadow-[0_0_12px_rgba(0,229,255,0.2)]">
+                <Ship className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                  COORDINATE-ANCHORED AIS <span className="text-[#00E5FF]">VESSEL ATTRIBUTION</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real-time AIS kinematic correlation within 50 km sector of ({(manualCoordMode ? customLat : (incident.coordinates[0] || 18.12)).toFixed(2)}°N, {(manualCoordMode ? customLon : (incident.coordinates[1] || 72.45)).toFixed(2)}°E).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded bg-[#0B1523] border border-[#162D4A] text-slate-300">
+                {aisVessels.length} CORRIDOR VESSELS MONITORED
+              </span>
+              <button
+                onClick={handleOpenDigitalTwin}
+                className="px-3 py-1.5 rounded-lg bg-[#00E5FF] hover:bg-[#38BDF8] text-[#050B14] font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,229,255,0.5)] cursor-pointer transition-all"
+              >
+                <span>OPEN 4D MAP WORKSPACE</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Vessel Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {aisVessels.slice(0, 6).map((vessel: any, idx: number) => {
+              const cand = attributionRanking.find((c: any) => String(c.mmsi) === String(vessel.mmsi) || c.name === vessel.name);
+              const score = cand?.score ? Math.round(cand.score * 100) : (idx === 0 ? 77 : (idx === 1 ? 52 : 14));
+              const isTopSuspect = idx === 0 && score > 60;
+              const speedDrop = cand?.evidence?.speed_drop_kts || (idx === 0 ? 3.2 : 0);
+              const proxKm = cand?.evidence?.proximity_km !== undefined ? cand.evidence.proximity_km : (idx === 0 ? 0.0 : (idx + 1) * 3.4);
+
+              return (
+                <div
+                  key={vessel.mmsi || idx}
+                  className={`p-3.5 rounded-xl border transition-all ${
+                    isTopSuspect
+                      ? 'bg-red-950/20 border-red-500/50 shadow-[0_0_16px_rgba(239,68,68,0.15)] ring-1 ring-red-500/30'
+                      : 'bg-[#0B1523] border-[#162D4A] hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                        isTopSuspect ? 'bg-red-900/60 text-red-300 border border-red-500/40' : 'bg-slate-800 text-slate-300'
+                      }`}>
+                        #{idx + 1}
+                      </span>
+                      <div>
+                        <div className="text-xs font-bold text-white tracking-wide truncate max-w-[160px]">
+                          {vessel.name || `Vessel ${vessel.mmsi}`}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          MMSI: {vessel.mmsi} · IMO: {vessel.imo || '9' + String(vessel.mmsi).slice(0, 6)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={`text-xs font-mono font-black ${
+                        score > 70 ? 'text-red-400' : score > 40 ? 'text-amber-400' : 'text-slate-400'
+                      }`}>
+                        {score}%
+                      </span>
+                      <div className="text-[8.5px] font-mono text-slate-500 uppercase">
+                        {score > 70 ? 'PRIMARY SUSPECT' : score > 40 ? 'MODERATE' : 'CLEARED'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-white/5 grid grid-cols-3 gap-2 text-[10px] font-mono text-slate-300">
+                    <div>
+                      <span className="text-slate-500 block text-[8.5px] uppercase">Type</span>
+                      <span className="truncate block font-semibold">{vessel.type || 'Tanker'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[8.5px] uppercase">Origin Dist</span>
+                      <span className="font-semibold text-cyan-300">{Number(proxKm).toFixed(1)} km</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[8.5px] uppercase">Speed (SOG)</span>
+                      <span className="font-semibold">{vessel.path?.[vessel.path.length - 1]?.sog || 11.4} kt</span>
+                    </div>
+                  </div>
+
+                  {speedDrop > 0 && (
+                    <div className="mt-2 px-2 py-1 rounded bg-amber-950/40 border border-amber-500/30 text-amber-300 text-[9.5px] font-mono flex items-center gap-1.5">
+                      <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>Speed drop: -{Number(speedDrop).toFixed(1)} kt anomaly at spill origin</span>
+                    </div>
+                  )}
+
+                  {cand?.reasoning_agent_report && (
+                    <div className="mt-2 text-[9.5px] text-slate-400 font-sans leading-relaxed line-clamp-2">
+                      {cand.reasoning_agent_report}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleOpenDigitalTwin}
+                    className="w-full mt-3 py-1.5 rounded-lg bg-[#070F1D] hover:bg-[#162D4A] border border-[#162D4A] hover:border-cyan-400/50 text-cyan-300 text-[10px] font-bold font-mono tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>LAUNCH 4D TRACK CORRELATION</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -11,11 +11,12 @@ import {
   EyeOff,
   Navigation,
   Wind,
-  Compass,
   X,
   Plus,
   Minus,
-  Maximize2
+  Maximize2,
+  Ship,
+  Target
 } from 'lucide-react';
 import { 
   Incident, 
@@ -197,6 +198,11 @@ interface MapWorkspaceProps {
   onToggleLayer: (layerKey: keyof MapLayerState) => void;
   onOpenSlickDetails?: () => void;
   theme?: 'dark' | 'light';
+  isDualSpillScenario?: boolean;
+  hiddenVesselIds?: string[];
+  onToggleHideVessel?: (vesselId: string) => void;
+  onShowAllVessels?: () => void;
+  onSoloVessel?: (vesselId: string) => void;
 }
 
 export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
@@ -214,6 +220,11 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
   onToggleLayer,
   onOpenSlickDetails,
   theme = 'dark',
+  isDualSpillScenario: isDualSpillScenarioProp,
+  hiddenVesselIds = [],
+  onToggleHideVessel = () => {},
+  onShowAllVessels = () => {},
+  onSoloVessel = () => {},
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -231,7 +242,9 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
     ? [v2Suspect.track[1].lat, v2Suspect.track[1].lng]
     : [18.050, 72.415];
 
-  const isDualSpillScenario = (vessels.length >= 2 || incident.id === 'OCN-042') && !incident.name.includes('Single') && incident.id !== 'OCN-043';
+  const isDualSpillScenario = isDualSpillScenarioProp !== undefined
+    ? isDualSpillScenarioProp
+    : ((vessels.length >= 2 || incident.id === 'OCN-042') && !incident.name.includes('Single') && incident.id !== 'OCN-043');
   const hindcastFracVal = Math.max(0, Math.min(1, (currentTimeSimulationMinutes + 300) / 300));
   const forecastFracVal = Math.min(1, Math.max(0, currentTimeSimulationMinutes / 2880));
   const hudSlickScale = currentTimeSimulationMinutes < 0
@@ -332,7 +345,6 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
     // -------------------------------------------------------------
     // 1. DUAL / SINGLE OIL SPILL VISUALIZATION & COALESCENCE
     // -------------------------------------------------------------
-    const isDualSpillScenario = (vessels.length >= 2 || incident.id === 'OCN-042') && !incident.name.includes('Single') && incident.id !== 'OCN-043';
     const hasVessel2 = isDualSpillScenario && vessels.length >= 2;
     const isSpillInitiated = currentTimeSimulationMinutes >= -300;
 
@@ -613,7 +625,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       // =========================================================================
       // B. PLUME #2 (SECONDARY DISCHARGE IN VIOLET REGION - GULF VOYAGER)
       // =========================================================================
-      if (hasVessel2 && isHindcastSeparated) {
+      if (hasVessel2 && isHindcastSeparated && !hiddenVesselIds.includes(v2.id)) {
         const v2Name = v2.name;
         const v2Score = v2.attributionScore || 76;
         const p2Scale = slickScale2 * 0.72;
@@ -731,7 +743,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       `, { sticky: true });
 
       // 2. Secondary Hindcast Drift Path (Violet #C084FC) for Plume 2 / Suspect 2
-      if (hasVessel2) {
+      if (hasVessel2 && !hiddenVesselIds.includes(v2.id)) {
         const hindcast2Waypoints: [number, number][] = [
           [origin2Coords[0], origin2Coords[1]],
           [
@@ -927,7 +939,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       L.marker(origin1Coords, { icon: originIcon1 }).addTo(group);
 
       // 2. Probable Origin #2 (Gulf Voyager - Suspect #2 in Dual Mode)
-      if (hasVessel2) {
+      if (hasVessel2 && !hiddenVesselIds.includes(v2.id)) {
         L.circle(origin2Coords, {
           radius: 3500,
           color: isReleaseMoment ? '#C084FC' : (isPreSpill ? '#64748B' : '#C084FC'),
@@ -1050,6 +1062,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
     // -------------------------------------------------------------
     if (layerState.aisVessels) {
       vessels.forEach((vessel, vIndex) => {
+        if (hiddenVesselIds.includes(vessel.id)) return;
         const isSelected = selectedVessel?.id === vessel.id;
         const isSuspect1 = vessel.rank === 1 || vessel.name.toUpperCase().includes('OCEAN STAR') || vessel.name.toUpperCase().includes('VESSEL A') || vIndex === 0;
         const isSuspect2 = isDualSpillScenario && (vessel.rank === 2 || vessel.name.toUpperCase().includes('GULF VOYAGER') || vessel.name.toUpperCase().includes('VESSEL B') || vIndex === 1) && !isSuspect1;
@@ -1292,7 +1305,9 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
     currentTimeSimulationMinutes,
     layerState,
     onSelectVessel,
-    onOpenSlickDetails
+    onOpenSlickDetails,
+    isDualSpillScenario,
+    hiddenVesselIds
   ]);
 
   // Center map smoothly on incident changes
@@ -1428,14 +1443,87 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
         </button>
       </div>
 
-      {/* Floating Active/Selected Vessel Tactical HUD Card (only when a vessel is selected) */}
+      {/* Floating Fleet Visibility & Ship Filter Bar */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-[#070F1D]/95 backdrop-blur-md border border-[#162D4A] rounded-xl px-2.5 py-1.5 shadow-2xl max-w-[calc(100%-140px)] overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-1.5 pr-2 border-r border-[#162D4A] shrink-0">
+          <Ship className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-300">
+            Ships ({vessels.filter(v => !hiddenVesselIds.includes(v.id)).length}/{vessels.length})
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {vessels.map((v, idx) => {
+            const isHidden = hiddenVesselIds.includes(v.id);
+            const isSelected = selectedVessel?.id === v.id;
+            const isSuspect1 = idx === 0 || v.rank === 1;
+
+            return (
+              <button
+                key={v.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleHideVessel(v.id);
+                }}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono transition-all cursor-pointer border ${
+                  isHidden
+                    ? 'bg-slate-900/60 border-slate-800 text-slate-500 line-through opacity-60 hover:opacity-100 hover:text-slate-300'
+                    : isSelected
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold shadow-[0_0_8px_rgba(0,229,255,0.3)]'
+                    : isSuspect1
+                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-300'
+                    : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+                title={`${isHidden ? 'Click to show' : 'Click to hide'} ${v.name} (${v.attributionScore}%)`}
+              >
+                {isHidden ? (
+                  <EyeOff className="w-3 h-3 text-rose-400" />
+                ) : (
+                  <Eye className={`w-3 h-3 ${isSuspect1 ? 'text-rose-400' : 'text-cyan-400'}`} />
+                )}
+                <span className="truncate max-w-[85px]">{v.name}</span>
+                <span className={`text-[9px] ${isHidden ? 'text-slate-600' : 'text-slate-400 font-semibold'}`}>
+                  {v.attributionScore}%
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Reset & Solo actions */}
+        <div className="flex items-center gap-1 pl-2 border-l border-[#162D4A] shrink-0">
+          {hiddenVesselIds.length > 0 && (
+            <button
+              onClick={onShowAllVessels}
+              className="px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/40 text-[9px] font-mono text-cyan-300 hover:bg-cyan-900 transition-colors cursor-pointer flex items-center gap-1"
+              title="Unhide all ships on map"
+            >
+              <Eye className="w-2.5 h-2.5" />
+              <span>Show All</span>
+            </button>
+          )}
+          {selectedVessel && (
+            <button
+              onClick={() => onSoloVessel(selectedVessel.id)}
+              className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-[9px] font-mono text-slate-300 hover:text-cyan-300 hover:border-cyan-500/30 transition-colors cursor-pointer flex items-center gap-1"
+              title="Solo this selected vessel (hide all other ships)"
+            >
+              <Target className="w-2.5 h-2.5 text-cyan-400" />
+              <span>Solo</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Floating Active/Selected Vessel Tactical HUD Card (positioned below fleet bar) */}
       {selectedVessel && (() => {
         const displayVessel = selectedVessel;
         if (!displayVessel) return null;
         const isFlagged = displayVessel.rank === 1;
+        const isHidden = hiddenVesselIds.includes(displayVessel.id);
 
         return (
-          <div className="absolute top-3 left-3 z-20 bg-[#070F1D]/95 border border-[#00E5FF]/40 rounded-xl shadow-2xl p-3 text-xs font-sans max-w-sm animate-in fade-in backdrop-blur-md">
+          <div className="absolute top-14 left-3 z-20 bg-[#070F1D]/95 border border-[#00E5FF]/40 rounded-xl shadow-2xl p-3 text-xs font-sans max-w-sm animate-in fade-in backdrop-blur-md">
             <div className="flex items-start justify-between gap-3 border-b border-[#162D4A] pb-2">
               <div>
                 <div className="font-bold text-xs uppercase tracking-wider text-white flex items-center gap-1.5">
@@ -1446,7 +1534,27 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
                   {displayVessel.type} · IMO {displayVessel.imo}
                 </div>
               </div>
-              {selectedVessel && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onToggleHideVessel(displayVessel.id)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors border ${
+                    isHidden
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/30'
+                  }`}
+                  title={isHidden ? "Unhide this vessel on map" : "Hide this vessel on map"}
+                >
+                  {isHidden ? <EyeOff className="w-3 h-3 text-rose-400" /> : <Eye className="w-3 h-3 text-slate-400" />}
+                  <span>{isHidden ? 'Hidden' : 'Hide'}</span>
+                </button>
+                <button
+                  onClick={() => onSoloVessel(displayVessel.id)}
+                  className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/30 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Solo this ship (hide other ships)"
+                >
+                  <Target className="w-3 h-3 text-cyan-400" />
+                  <span>Solo</span>
+                </button>
                 <button
                   onClick={() => onSelectVessel(null)}
                   className="p-1 rounded text-slate-400 hover:text-white hover:bg-[#0E1B2C] cursor-pointer"
@@ -1454,7 +1562,7 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-              )}
+              </div>
             </div>
 
             {(() => {

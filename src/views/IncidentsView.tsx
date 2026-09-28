@@ -173,32 +173,34 @@ export const IncidentsView: React.FC<IncidentsViewProps> = ({
               </thead>
               <tbody className="divide-y divide-[#162D4A]">
                 {filteredIncidents.map((inc) => {
-                  const isSpill1 = inc.id === 'SPILL_001' || inc.id === 'OCN-042';
-                  const isSpill2 = inc.id === 'SPILL_002';
-                  const isSpill3 = inc.id === 'SPILL_003';
-
-                  const idDisplay = isSpill1 ? 'SPILL_001' : (isSpill2 ? 'SPILL_002' : (isSpill3 ? 'SPILL_003' : inc.id));
-                  const codeDisplay = idDisplay;
-
-                  const locationName = isSpill1 
-                    ? 'Offshore Mumbai Basin' 
-                    : (isSpill2 ? 'Chennai Port / Coromandel Coast' : 'Kochi Offshore / Malabar Coast');
+                  const idDisplay = inc.id;
+                  const codeDisplay = inc.code || inc.id;
+                  const locationName = inc.locationName || inc.name || 'Maritime Sector';
+                  const coordsDisplay = `${(inc.coordinates?.[0] ?? 18.12).toFixed(2)}°N, ${(inc.coordinates?.[1] ?? 72.45).toFixed(2)}°E`;
                   
-                  const coordsDisplay = isSpill1 
-                    ? '18.12°N, 72.45°E' 
-                    : (isSpill2 ? '13.12°N, 80.45°E' : '9.95°N, 76.05°E');
+                  // Format UTC date/time cleanly
+                  let dateStr = 'ACTIVE';
+                  let timeStr = 'LIVE UTC';
+                  try {
+                    const d = new Date(inc.detectedAt || Date.now());
+                    if (!isNaN(d.getTime())) {
+                      dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                      timeStr = `${d.toISOString().slice(11, 19)} UTC`;
+                    } else {
+                      dateStr = String(inc.detectedAt || 'LIVE');
+                    }
+                  } catch {
+                    dateStr = String(inc.detectedAt || 'LIVE');
+                  }
+                  const dateDisplay = { date: dateStr, time: timeStr };
 
-                  const dateDisplay = isSpill1 
-                    ? { date: '07 SEP 2026', time: '11:12:30 UTC' }
-                    : (isSpill2 ? { date: '15 JUL 2026', time: '08:00:00 UTC' } : { date: '20 NOV 2025', time: '14:45:00 UTC' });
+                  const areaDisplay = `${(inc.slickAreaKm2 ?? 8.25).toFixed(1)} km²`;
+                  const confNum = Number((inc.confidencePercent ?? 95.8).toFixed(1));
+                  const confDisplay = `${confNum}%`;
 
-                  const areaDisplay = isSpill1 ? '4.2 km²' : (isSpill2 ? '1.5 km²' : '8.7 km²');
-                  const confDisplay = isSpill1 ? '94.7%' : (isSpill2 ? '89.3%' : '91.1%');
-                  const confNum = isSpill1 ? 94.7 : (isSpill2 ? 89.3 : 91.1);
-
-                  const isInvestigation = isSpill1;
-                  const priorityLabel = isSpill1 ? 'HIGH' : (isSpill2 ? 'MEDIUM' : 'LOW');
-                  const borderLeftColor = isSpill1 ? 'border-l-4 border-l-[#EF4444]' : 'border-l-4 border-l-[#10B981]';
+                  const isInvestigation = (inc.status || '').toUpperCase().includes('INVESTIGATION');
+                  const priorityLabel = inc.priority || (confNum > 90 ? 'HIGH' : 'MEDIUM');
+                  const borderLeftColor = priorityLabel === 'HIGH' ? 'border-l-4 border-l-[#EF4444]' : 'border-l-4 border-l-[#10B981]';
 
                   return (
                     <tr

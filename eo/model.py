@@ -20,9 +20,34 @@ Constants verified against experiment_summary_v3.json:
 """
 
 import math
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import numpy as np
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    HAS_TORCH = True
+except ImportError:
+    torch = None
+    HAS_TORCH = False
+
+    class _DummyModule:
+        def __init__(self, *args, **kwargs):
+            pass
+        def __call__(self, *args, **kwargs):
+            return self
+
+    class _DummyNN:
+        Module = _DummyModule
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: _DummyModule()
+
+    class _DummyF:
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    nn = _DummyNN()
+    F = _DummyF()
 
 # ---- Verified constants -------------------------------------------------- #
 

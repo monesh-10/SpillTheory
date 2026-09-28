@@ -443,3 +443,12 @@ def generate_live_drift_forecast(start_lat: float, start_lon: float, start_time_
 
     return forecast
 
+
+def get_surface_currents(lat: float, lon: float) -> tuple[float, float, float]:
+    """
+    Returns (status, current_speed_ms, current_direction_deg) for Lagrangian advection.
+    """
+    curr_spd_ms = 0.28 + 0.05 * math.sin(math.radians(lat * 3.0))
+    curr_dir_deg = (62.0 + 8.0 * math.sin(math.radians(lon * 2.0))) % 360.0
+    return (1.0, curr_spd_ms, curr_dir_deg)
+

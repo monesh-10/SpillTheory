@@ -80,17 +80,8 @@ def _init_active_spills() -> list[dict[str, Any]]:
     """Generates active incidents with current real-time timestamps and dynamic locations."""
     now = datetime.now(timezone.utc)
     t_now = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    t_2d = (now - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    t_5d = (now - timedelta(days=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     return [
-        {
-            "spill_id": "OCN-042",
-            "timestamp": t_now,
-            "location": get_location_name(18.112, 72.464),
-            "area_km2": 13.48,
-            "status": "Active Investigation - Dual Coalesced"
-        },
         {
             "spill_id": "OCN-043",
             "timestamp": t_now,
@@ -99,31 +90,18 @@ def _init_active_spills() -> list[dict[str, Any]]:
             "status": "Active Investigation - Single Point-Source"
         },
         {
-            "spill_id": "SPILL_004",
+            "spill_id": "OCN-042",
             "timestamp": t_now,
-            "location": get_location_name(22.45, 69.20),
-            "area_km2": 11.20,
-            "status": "Active Investigation - Gulf of Kutch Tanker Spill"
-        },
-        {
-            "spill_id": "SPILL_002",
-            "timestamp": t_2d,
-            "location": get_location_name(13.12, 80.45),
-            "area_km2": 1.5,
-            "status": "Resolved - Attributed"
-        },
-        {
-            "spill_id": "SPILL_003",
-            "timestamp": t_5d,
-            "location": get_location_name(9.95, 76.05),
-            "area_km2": 8.7,
-            "status": "Resolved - Natural Seep"
+            "location": get_location_name(18.112, 72.464),
+            "area_km2": 13.48,
+            "status": "Active Investigation - Dual Coalesced"
         }
     ]
 
 ACTIVE_SPILLS: list[dict[str, Any]] = _init_active_spills()
 
 CUSTOM_SCENARIOS: dict[str, Any] = {}
+
 
 
 def build_and_register_spill_scenario(
@@ -210,8 +188,17 @@ def build_and_register_spill_scenario(
             calc_origin2_lat = round(bt_res2["best_centroid"][0], 4)
             calc_origin2_lon = round(bt_res2["best_centroid"][1], 4)
 
-    hindcast_timestamp1 = "2026-09-07T02:47:00Z"
-    hindcast_timestamp2 = "2026-09-07T02:35:00Z"
+    # 3. Dynamic Detection and Hindcast Timestamps
+    if not detection_timestamp or "2026-09-07" in detection_timestamp:
+        detection_timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    try:
+        dt_det = datetime.fromisoformat(detection_timestamp.replace("Z", "+00:00"))
+    except Exception:
+        dt_det = datetime.now(timezone.utc)
+
+    hindcast_timestamp1 = (dt_det - timedelta(hours=4, minutes=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    hindcast_timestamp2 = (dt_det - timedelta(hours=5, minutes=10)).strftime("%Y-%m-%dT%H:%M:%SZ")
     loc_str = get_location_name(poly_center_lat, poly_center_lon)
 
     # 4. Coordinate-Aware Dynamic AIS Vessel Resolution & Tracking
@@ -238,6 +225,7 @@ def build_and_register_spill_scenario(
     )
 
     # 6. Sensor & Modality Metadata
+
     meta_payload = {
         "modality": modality,
         "image_url": image_url,

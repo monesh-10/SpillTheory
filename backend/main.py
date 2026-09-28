@@ -173,12 +173,7 @@ def get_scenario(spill_id: str):
         data = CUSTOM_SCENARIOS[spill_id]
     else:
         is_single = spill_id == "OCN-043" or "single" in spill_id.lower()
-        if spill_id == "SPILL_002":
-            json_path = ROOT / "demo_data" / "demo_scenario_2.json"
-        elif spill_id == "SPILL_003":
-            json_path = ROOT / "demo_data" / "demo_scenario_3.json"
-        else:
-            json_path = DEMO_JSON
+        json_path = DEMO_JSON
             
         if not json_path.exists():
             raise HTTPException(status_code=404, detail="Scenario data not found")
@@ -193,11 +188,7 @@ def get_scenario(spill_id: str):
             data["spill_event"]["topology"] = "SINGLE_POINT_SOURCE"
             # Single vessel only
             data["ais"]["vessel_tracks"] = [data["ais"]["vessel_tracks"][0]]
-        elif spill_id == "SPILL_004" or "kutch" in spill_id.lower():
-            data["spill_event"]["spill_id"] = "SPILL_004"
-            data["spill_event"]["area_km2"] = 11.20
-            data["spill_event"]["classification"] = "Gulf of Kutch Crude Tanker Discharging Slick"
-            data["spill_event"]["centroid"] = {"lat": 22.45, "lon": 69.20}
+
 
     # Inject live MetOcean telemetry and real-time Lagrangian drift forecast (+48 hours)
     try:
@@ -392,9 +383,10 @@ async def detect_sar(
     from sar.inference import sar_predict
     from sar.geo_convert import mask_to_geojson_polygons
 
-    suffix = Path(file.filename).suffix.lower() if (file and file.filename) else ".tif"
-    if not suffix or suffix not in [".tif", ".tiff"]:
-        raise HTTPException(status_code=400, detail="Only SAR TIFF (.tif, .tiff) files are supported.")
+    raw_ext = Path(file.filename).suffix.lower() if (file and file.filename) else ""
+    if not raw_ext and demo_filename:
+        raw_ext = Path(demo_filename).suffix.lower()
+    suffix = raw_ext if raw_ext in [".tif", ".tiff", ".png", ".jpg", ".jpeg"] else ".png"
     temp_img_path = ROOT / "backend" / f"_temp_sar{suffix}"
     
     if demo_filename:
@@ -446,6 +438,8 @@ async def detect_sar(
                 "max_probability": round(float(res.get("probability_map", clean_mask).max()), 3),
                 "location": loc_str,
                 "image_url": f"/demo_data/{saved_sar_name}",
+                "ais_vessels": [],
+                "attribution_ranking": [],
                 "message": "Clean Ocean Benchmark Passed: U-Net model accurately predicted 0.00% spill coverage (Zero False Positive). Ocean surface verified clean.",
                 "reasoning_agent_report": "Reasoning Agent Evaluation: Radar backscatter across the SAR scene shows undisturbed sea clutter Bragg scattering with no capillary wave suppression. No anomalous dark radar patches were detected. Confirms 0% false alarm rate on clean waters."
             }
@@ -478,7 +472,8 @@ async def detect_sar(
                 round(center_lon - d, 5), round(center_lat - d, 5)
             ]]]
             
-        # Construct full digital twin intelligence scenario using shared builder
+        # Construct full digital twin intelligence scenario using shared builder with current timestamp
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         source_peaks = topology.get("source_peaks", [])
         scenario_payload = build_and_register_spill_scenario(
             spill_id=new_spill_id,
@@ -499,10 +494,12 @@ async def detect_sar(
             km_span=15.0,
             origin_lat=origin_lat,
             origin_lon=origin_lon,
-            detection_timestamp="2026-09-07T04:32:00Z",
+            detection_timestamp=now_iso,
             is_dual=(num_sources == 2),
         )
         loc_str = scenario_payload["spill_event"]["location_name"]
+        ais_vessels = scenario_payload.get("ais", {}).get("vessel_tracks", [])
+        attribution_ranking = scenario_payload.get("attribution", {}).get("candidates", [])
         
         return {
             "status": "success",
@@ -526,8 +523,11 @@ async def detect_sar(
             "max_probability": float(res.get("probability_map", clean_mask).max()),
             "sar_metadata": scenario_payload["sar_metadata"],
             "authority_dispatch": scenario_payload["authority_dispatch"],
+            "ais_vessels": ais_vessels,
+            "attribution_ranking": attribution_ranking,
             "scenario": scenario_payload
         }
+
         
     finally:
         temp_img_path.unlink(missing_ok=True)

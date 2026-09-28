@@ -74,35 +74,32 @@ export const apiService = {
           
           // Always ensure Primary Dual and Single Point-Source are top scenarios
           list.push(PRIMARY_INCIDENT);
-          list.push(SINGLE_SPILL_INCIDENT);
 
           raw.forEach((item: any) => {
-            if (item.spill_id === 'OCN-042' || item.spill_id === 'OCN-043') return;
-            const fallback = ALL_INCIDENTS.find(i => i.id === item.spill_id) || ALL_INCIDENTS[2] || ALL_INCIDENTS[0];
-            const coords: [number, number] = item.spill_id === 'SPILL_002'
-              ? [13.12, 80.45]
-              : item.spill_id === 'SPILL_003'
-              ? [9.95, 76.05]
-              : item.spill_id === 'SPILL_004' || item.spill_id?.includes('KUTCH')
-              ? [22.45, 69.20]
-              : [18.12, 72.45];
-            const name = item.spill_id === 'SPILL_002'
-              ? 'Chennai Port Cargo Bunker Leak'
-              : item.spill_id === 'SPILL_003'
-              ? 'Kochi Malabar Coast Seep'
-              : item.spill_id === 'SPILL_004'
-              ? 'Gulf of Kutch Crude Tanker Discharging Slick'
-              : (item.location || fallback.name);
+            if (item.spill_id === 'OCN-043') return;
+            const coords: [number, number] = [
+              Number(item.centroid?.lat || item.coordinates?.[0] || 18.112),
+              Number(item.centroid?.lon || item.coordinates?.[1] || 72.464)
+            ];
+            const name = item.name || item.classification || `${item.location || 'Offshore'} Active Investigation`;
             list.push({
-              ...fallback,
-              id: item.spill_id || fallback.id,
-              code: item.spill_id || fallback.code,
+              id: item.spill_id,
+              code: item.spill_id,
               name: name,
-              locationName: item.location || fallback.locationName,
+              locationName: item.location || 'Offshore Sector',
               coordinates: coords,
-              slickAreaKm2: item.area_km2 || fallback.slickAreaKm2,
-              detectedAt: item.timestamp || fallback.detectedAt,
-              status: item.status?.toUpperCase().includes('ACTIVE') ? 'UNDER INVESTIGATION' : 'MONITORING'
+              slickAreaKm2: item.area_km2 || 8.25,
+              slickPerimeterKm: Math.round(Math.sqrt(Number(item.area_km2 || 8.25)) * 8.5 * 10) / 10,
+              confidencePercent: 95.8,
+              classification: item.classification || 'Point-Source Petroleum Slick',
+              sensor: item.sensor || 'Sentinel-1 SAR / Sentinel-2 MSI',
+              status: item.status?.toUpperCase().includes('ACTIVE') ? 'UNDER INVESTIGATION' : 'MONITORING',
+              priority: 'HIGH',
+              detectedAt: item.timestamp || new Date().toISOString(),
+              estimatedAgeHours: '5.5 hours',
+              backscatterDb: -9.2,
+              model: 'SpillTheory Neural Network',
+              summary: `Dynamic active incident at ${item.location || 'offshore coordinates'}.`
             });
           });
           return list;
@@ -120,8 +117,7 @@ export const apiService = {
     return found || (id === 'OCN-043' || id.includes('043') ? SINGLE_SPILL_INCIDENT : PRIMARY_INCIDENT);
   },
 
-
-  async getScenarioBundle(spillId: string = 'OCN-042'): Promise<ScenarioBundle> {
+  async getScenarioBundle(spillId: string = 'OCN-043'): Promise<ScenarioBundle> {
     try {
       const res = await fetch(`${BACKEND_URL}/api/scenario/${spillId}`, { signal: AbortSignal.timeout(3500) });
       if (res.ok) {
@@ -131,14 +127,9 @@ export const apiService = {
         const origLat = Number(raw.hindcast?.origin_estimate?.point?.lat || cLat - 0.025);
         const origLon = Number(raw.hindcast?.origin_estimate?.point?.lon || cLon - 0.05);
 
-        const incidentName = raw.spill_event?.classification || raw.spill_event?.location_name || (spillId === 'SPILL_002'
-          ? 'Chennai Port Cargo Bunker Leak'
-          : spillId === 'SPILL_003'
-          ? 'Kochi Malabar Coast Seep'
-          : spillId === 'SPILL_004'
-          ? 'Gulf of Kutch Crude Tanker Discharging Slick'
-          : (spillId === 'OCN-043' || spillId.includes('043') ? 'Offshore Mumbai Basin (Single Point-Source)' : 'Offshore Mumbai Basin (Dual Coalesced)'));
-        const locationStr = raw.spill_event?.location_name || (spillId === 'SPILL_002' ? 'Coromandel Coast, Chennai' : spillId === 'SPILL_003' ? 'Malabar Coast, Kochi' : spillId === 'SPILL_004' ? 'Gulf of Kutch Maritime Zone' : 'Offshore Mumbai Basin, Arabian Sea');
+        const incidentName = raw.spill_event?.classification || raw.spill_event?.location_name || 'Offshore Oil Slick Investigation';
+        const locationStr = raw.spill_event?.location_name || 'Offshore Maritime Sector';
+
 
         const incident: Incident = {
           id: raw.spill_event?.spill_id || spillId,
@@ -312,41 +303,24 @@ export const apiService = {
           mode: 'LIVE METOCEAN'
         } : PRIMARY_METOCEAN;
 
-        const shorelineRisk: ShorelineRiskZone = spillId === 'SPILL_002' ? {
-          name: 'Marina Beach & Ennore Fishery Reserve',
-          region: 'Coromandel Coastal Corridor, Tamil Nadu',
-          distanceOffshoreKm: 6.8,
-          projectedEtaHours: 9.5,
+        const shorelineRisk: ShorelineRiskZone = {
+          name: `${locationStr} Sensitive Coastal Zone`,
+          region: `${locationStr} Maritime Sector`,
+          distanceOffshoreKm: Number((Math.hypot(cLat - origLat, cLon - origLon) * 111 + 6.5).toFixed(1)),
+          projectedEtaHours: 14.5,
           riskLevel: 'HIGH',
           protocolTier: 'TIER-2 REGIONAL ACTIVATION',
-          vulnerabilityIndex: 8.8,
-          coordinates: [13.15, 80.34],
+          vulnerabilityIndex: 8.5,
+          coordinates: [Number((cLat - 0.05).toFixed(4)), Number((cLon + 0.08).toFixed(4))],
           vulnerableAssets: [
-            { name: 'Ennore Creek Estuarine Fishery', type: 'Fisheries & Marine Habitat', sensitivity: 'CRITICAL' },
-            { name: 'Chennai Port Outer Channel', type: 'Commercial Navigation Corridor', sensitivity: 'HIGH' }
+            { name: `${locationStr} Nearshore Fishery & Marine Habitat`, type: 'Fisheries & Marine Habitat', sensitivity: 'CRITICAL' },
+            { name: `${locationStr} Navigation Channel & Port Access`, type: 'Commercial Navigation Corridor', sensitivity: 'HIGH' }
           ],
           immediateActions: [
-            { id: 'ACT-1', text: 'Pre-position nearshore deflection booms along Ennore inlet mouth', completed: true, priority: 'CRITICAL' },
-            { id: 'ACT-2', text: 'Alert Indian Coast Guard Eastern Region Command', completed: false, priority: 'HIGH' }
+            { id: 'ACT-1', text: 'Pre-position nearshore deflection booms along sensitive coastal inlets', completed: true, priority: 'CRITICAL' },
+            { id: 'ACT-2', text: 'Alert Regional Maritime Search & Rescue / Coast Guard Command', completed: false, priority: 'HIGH' }
           ]
-        } : spillId === 'SPILL_003' ? {
-          name: 'Vypin Island Mangrove Sanctuary',
-          region: 'Cochin Backwaters & Coastal Buffer, Kerala',
-          distanceOffshoreKm: 5.2,
-          projectedEtaHours: 7.0,
-          riskLevel: 'CRITICAL',
-          protocolTier: 'TIER-2 RAPID CONTAINMENT',
-          vulnerabilityIndex: 9.4,
-          coordinates: [9.97, 76.24],
-          vulnerableAssets: [
-            { name: 'Vypin Tidal Mangrove Ecosystem', type: 'Protected Ecological Reserve', sensitivity: 'CRITICAL' },
-            { name: 'Cochin Port Dredged Navigation Channel', type: 'Deepwater Shipping Channel', sensitivity: 'HIGH' }
-          ],
-          immediateActions: [
-            { id: 'ACT-1', text: 'Deploy curtain skimmers across harbour approach channel', completed: true, priority: 'CRITICAL' },
-            { id: 'ACT-2', text: 'Mobilize regional marine wildlife rehabilitation team', completed: false, priority: 'HIGH' }
-          ]
-        } : PRIMARY_SHORELINE_RISK;
+        };
 
         return {
           incident,
@@ -598,9 +572,27 @@ export const apiService = {
     return SAR_DETECTION_MOCK;
   },
 
-  async runEODetection(file: File): Promise<any> {
+  async runEODetection(
+    demoFilenameOrFile: string | File,
+    centerLat: number = 18.12,
+    centerLon: number = 72.45,
+    originLat?: number,
+    originLon?: number
+  ): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
+    if (typeof demoFilenameOrFile === 'string') {
+      formData.append('demo_filename', demoFilenameOrFile);
+    } else {
+      formData.append('file', demoFilenameOrFile);
+    }
+    formData.append('center_lat', String(centerLat));
+    formData.append('center_lon', String(centerLon));
+    if (originLat !== undefined && !isNaN(originLat)) {
+      formData.append('origin_lat', String(originLat));
+    }
+    if (originLon !== undefined && !isNaN(originLon)) {
+      formData.append('origin_lon', String(originLon));
+    }
     try {
       const res = await fetch(`${BACKEND_URL}/api/detect-eo`, {
         method: 'POST',
