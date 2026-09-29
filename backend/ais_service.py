@@ -185,8 +185,8 @@ def generate_sector_ais_vessels(
         vessel1_imo = "9384910"
         vessel1_mmsi = 419001284
         vessel1_flag = "Liberia"
-        vessel1_dest = "JNPT Mumbai / Terminal 2"
-        v1_heading = 125
+        vessel1_dest = "Kochi SPM / Malabar Passage"
+        v1_heading = 168  # Arabian Sea deep-water TSS highway (SSE)
         v1_sog = 11.4
 
         vessel2_name = "GULF VOYAGER"
@@ -198,9 +198,9 @@ def generate_sector_ais_vessels(
         v2_heading = 310
         v2_sog = 10.8
 
-        cand1 = {"name": "DESH SHANTI", "type": "Crude Oil Tanker", "mmsi": 419000852, "imo": "9273765", "flag": "India", "dest": "Kochi Crude Terminal", "sog": 12.4, "heading": 175}
-        cand2 = {"name": "ATLANTIC BREEZE", "type": "Bulk Carrier", "mmsi": 419003841, "imo": "9223401", "flag": "Panama", "dest": "Mormugao Port", "sog": 12.8, "heading": 140}
-        cand3 = {"name": "PACIFIC RUBY", "type": "Container Ship", "mmsi": 419004550, "imo": "9452312", "flag": "Singapore", "dest": "Port of Colombo", "sog": 14.5, "heading": 135}
+        cand1 = {"name": "DESH SHANTI", "type": "Crude Oil Tanker", "mmsi": 419000852, "imo": "9273765", "flag": "India", "dest": "Kochi Crude Terminal", "sog": 12.4, "heading": 170}
+        cand2 = {"name": "ATLANTIC BREEZE", "type": "Bulk Carrier", "mmsi": 419003841, "imo": "9223401", "flag": "Panama", "dest": "Mormugao Port", "sog": 12.8, "heading": 165}
+        cand3 = {"name": "PACIFIC RUBY", "type": "Container Ship", "mmsi": 419004550, "imo": "9452312", "flag": "Singapore", "dest": "Port of Colombo", "sog": 14.5, "heading": 172}
 
     elif 12.0 <= lat <= 14.5 and 79.5 <= lon <= 81.5:
         sector_name = "Chennai Port / Coromandel Maritime Sector"
@@ -308,7 +308,7 @@ def generate_sector_ais_vessels(
         vessel1_mmsi = int(f"419{int(abs(lat*1000) % 899999 + 100000)}"[:9])
         vessel1_flag = "Liberia"
         vessel1_dest = "International Deepwater Passage"
-        v1_heading = 125
+        v1_heading = 168
         v1_sog = 11.5
 
         vessel2_name = f"{loc_prefix} PIONEER"
@@ -320,9 +320,9 @@ def generate_sector_ais_vessels(
         v2_heading = 310
         v2_sog = 10.8
 
-        cand1 = {"name": f"{loc_prefix} STAR", "type": "Bulk Carrier", "mmsi": int(f"352{int(abs(lat*777) % 899999 + 100000)}"[:9]), "imo": "9421098", "flag": "Panama", "dest": "Transit", "sog": 12.0, "heading": 130}
-        cand2 = {"name": f"{loc_prefix} TRADER", "type": "Container Ship", "mmsi": int(f"636{int(abs(lon*888) % 899999 + 100000)}"[:9]), "imo": "9382210", "flag": "Liberia", "dest": "Transit", "sog": 14.2, "heading": 120}
-        cand3 = {"name": f"{loc_prefix} MARU", "type": "General Cargo", "mmsi": int(f"257{int(abs(lat*999) % 899999 + 100000)}"[:9]), "imo": "9366540", "flag": "Norway", "dest": "Transit", "sog": 11.0, "heading": 145}
+        cand1 = {"name": f"{loc_prefix} STAR", "type": "Bulk Carrier", "mmsi": int(f"352{int(abs(lat*777) % 899999 + 100000)}"[:9]), "imo": "9421098", "flag": "Panama", "dest": "Transit", "sog": 12.0, "heading": 160}
+        cand2 = {"name": f"{loc_prefix} TRADER", "type": "Container Ship", "mmsi": int(f"636{int(abs(lon*888) % 899999 + 100000)}"[:9]), "imo": "9382210", "flag": "Liberia", "dest": "Transit", "sog": 14.2, "heading": 170}
+        cand3 = {"name": f"{loc_prefix} MARU", "type": "General Cargo", "mmsi": int(f"257{int(abs(lat*999) % 899999 + 100000)}"[:9]), "imo": "9366540", "flag": "Norway", "dest": "Transit", "sog": 11.0, "heading": 175}
 
     # Parse detection_timestamp dynamically
     try:

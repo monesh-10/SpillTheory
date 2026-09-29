@@ -116,10 +116,10 @@ export const SUSPECT_VESSELS: Vessel[] = [
     type: 'Crude Oil Tanker',
     lengthM: 248,
     beamM: 42,
-    currentCoordinates: [17.895, 72.565],
+    currentCoordinates: [17.840, 72.445],
     currentSpeedKt: 11.4,
-    currentHeadingDeg: 125,
-    distanceFromOriginKm: 24.8,
+    currentHeadingDeg: 168,
+    distanceFromOriginKm: 25.4,
     distanceAtReleaseKm: 0.12,
     releaseTimestampUtc: '02:47 UTC',
     releaseCoordinates: [18.065, 72.395],
@@ -136,20 +136,20 @@ export const SUSPECT_VESSELS: Vessel[] = [
     speedAnomalyDetected: true,
     courseDeviationDetected: true,
     presenceInOriginWindow: true,
-    destination: 'JNPT MUMBAI',
-    eta: '07 Sep 2026 18:00 UTC',
+    destination: 'COLOMBO / MALABAR PASSAGE',
+    eta: '08 Sep 2026 14:00 UTC',
     track: [
-      { lat: 18.180, lng: 72.280, timestampUtc: '01:42 UTC', speedKt: 11.4, headingDeg: 125 },
-      { lat: 18.122, lng: 72.338, timestampUtc: '02:18 UTC', speedKt: 11.4, headingDeg: 125 },
-      { lat: 18.065, lng: 72.395, timestampUtc: '02:47 UTC', speedKt: 11.4, headingDeg: 125 },
-      { lat: 17.980, lng: 72.480, timestampUtc: '03:30 UTC', speedKt: 11.4, headingDeg: 125 },
-      { lat: 17.895, lng: 72.565, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 125 }
+      { lat: 18.221, lng: 72.360, timestampUtc: '01:42 UTC', speedKt: 11.4, headingDeg: 168 },
+      { lat: 18.143, lng: 72.378, timestampUtc: '02:18 UTC', speedKt: 11.4, headingDeg: 168 },
+      { lat: 18.065, lng: 72.395, timestampUtc: '02:47 UTC', speedKt: 11.4, headingDeg: 168 },
+      { lat: 17.955, lng: 72.420, timestampUtc: '03:30 UTC', speedKt: 11.4, headingDeg: 168 },
+      { lat: 17.840, lng: 72.445, timestampUtc: '04:32 UTC', speedKt: 11.4, headingDeg: 168 }
     ],
     activityTimeline: [
-      { timestampUtc: '01:42 UTC', description: 'Vessel enters forensic tracking corridor from North-West heading 125°', isAnomaly: false, type: 'ENTER_SECTOR' },
+      { timestampUtc: '01:42 UTC', description: 'Vessel enters Arabian Sea TSS corridor from NNW heading 168°', isAnomaly: false, type: 'ENTER_SECTOR' },
       { timestampUtc: '02:18 UTC', description: 'Approaching offshore sector along designated commercial corridor', isAnomaly: false, type: 'ENTER_SECTOR' },
       { timestampUtc: '02:47 UTC', description: 'Direct transit through probabilistic hindcast origin centroid at 02:47 UTC', isAnomaly: true, type: 'ORIGIN_PROXIMITY' },
-      { timestampUtc: '03:30 UTC', description: 'Continued transit along 125° corridor towards destination', isAnomaly: false, type: 'RESUME_COURSE' },
+      { timestampUtc: '03:30 UTC', description: 'Continued transit along 168° Arabian Sea TSS corridor towards destination', isAnomaly: false, type: 'RESUME_COURSE' },
       { timestampUtc: '04:32 UTC', description: 'Present AIS position at SAR satellite acquisition epoch', isAnomaly: false, type: 'RESUME_COURSE' }
     ]
   },

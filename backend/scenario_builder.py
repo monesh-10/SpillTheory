@@ -261,7 +261,10 @@ def build_and_register_spill_scenario(
             "origin_estimate": {
                 "point": {"lat": calc_origin1_lat, "lon": calc_origin1_lon},
                 "time": hindcast_timestamp1,
-                "time_window": ["2026-09-07T02:00:00Z", "2026-09-07T03:30:00Z"],
+                "time_window": [
+                    (dt_det - timedelta(hours=5, minutes=30)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    (dt_det - timedelta(hours=3, minutes=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                ],
                 "confidence": 0.917,
                 "secondary_point": {"lat": calc_origin2_lat, "lon": calc_origin2_lon} if is_dual else None
             }
@@ -284,20 +287,39 @@ def build_and_register_spill_scenario(
             "disclaimer": "Deterministic kinematic proximity and anomaly attribution score."
         },
         "authority_dispatch": {
-            "icg_mrcc_mumbai": {
+            (
+                "icg_mrcc_mumbai" if (17.0 <= poly_center_lat <= 21.0 and 70.0 <= poly_center_lon <= 74.0)
+                else "icg_mrcc_chennai" if (12.0 <= poly_center_lat <= 15.0 and 79.0 <= poly_center_lon <= 82.0)
+                else "icg_mrcc_kochi" if (8.5 <= poly_center_lat <= 12.0 and 74.0 <= poly_center_lon <= 77.5)
+                else "icg_mrcc_kutch" if (21.0 <= poly_center_lat <= 24.0 and 68.0 <= poly_center_lon <= 72.0)
+                else "regional_mrcc_command"
+            ): {
                 "status": "DISPATCHED & BROADCASTED",
-                "protocol": "NOSDCP Tier-1 National Oil Spill Disaster Plan Activated",
-                "interceptor_craft": "ICG Interceptor Craft C-432 mobilized to T+12h drift intercept waypoint",
-                "vhf_advisory": "Urgent Ch-16 Navigational Warning broadcasted to Murud & Alibaug fishing fleets",
+                "agency": (
+                    "ICG MRCC Mumbai" if (17.0 <= poly_center_lat <= 21.0 and 70.0 <= poly_center_lon <= 74.0)
+                    else "ICG MRCC Chennai Regional HQ" if (12.0 <= poly_center_lat <= 15.0 and 79.0 <= poly_center_lon <= 82.0)
+                    else "ICG MRCC Kochi" if (8.5 <= poly_center_lat <= 12.0 and 74.0 <= poly_center_lon <= 77.5)
+                    else "ICG MRCC Gandhidham / Okha Sub-Center" if (21.0 <= poly_center_lat <= 24.0 and 68.0 <= poly_center_lon <= 72.0)
+                    else f"MRCC Sector Command ({loc_str.split(' (')[0]})"
+                ),
+                "protocol": "Tier-1 National Oil Spill Disaster Contingency Protocol Activated",
+                "interceptor_craft": "Fast Interceptor Craft mobilized to forward drift waypoint",
+                "vhf_advisory": f"Urgent Navigational Warning (Ch-16) broadcasted to commercial & fishing fleets in {loc_str.split(' (')[0]}",
                 "coastal_eta_hours": 23.5
             },
             "port_trust": {
-                "terminal": "JNPT Nhava Sheva / Mumbai Port Authority",
+                "terminal": (
+                    "JNPT Nhava Sheva / Mumbai Port Authority" if (17.0 <= poly_center_lat <= 21.0 and 70.0 <= poly_center_lon <= 74.0)
+                    else "Chennai Port Authority / Kamarajar Port" if (12.0 <= poly_center_lat <= 15.0 and 79.0 <= poly_center_lon <= 82.0)
+                    else "Cochin Port Trust" if (8.5 <= poly_center_lat <= 12.0 and 74.0 <= poly_center_lon <= 77.5)
+                    else "Deendayal Port Authority (Kandla) / Vadinar SBM" if (21.0 <= poly_center_lat <= 24.0 and 68.0 <= poly_center_lon <= 72.0)
+                    else f"Port Authority ({loc_str.split(' (')[0]})"
+                ),
                 "status": "PRE-POSITIONED",
-                "action": "800m heavy-duty containment boom deployed across coastal creek inlets"
+                "action": "800m heavy-duty containment booms pre-positioned across sensitive coastal inlets"
             },
             "statutory_inquiry": {
-                "agency": "Directorate General of Shipping (DGS) & MPCB",
+                "agency": "Directorate General of Shipping (DGS) & Pollution Control Board",
                 "dossier_reference": f"ICG/MRCC/ENV-{spill_id}",
                 "targets": [f"{v['name']} (IMO: {v['imo']})" for v in vessels_list[: 1]]
             }

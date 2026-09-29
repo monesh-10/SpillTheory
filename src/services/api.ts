@@ -51,6 +51,82 @@ function generateSubtleCloud(origin: [number, number], count: number = 40): [num
   return points;
 }
 
+function computeShorelineRiskZone(cLat: number, cLon: number, locationStr: string): ShorelineRiskZone {
+  let coastLat: number;
+  let coastLon: number;
+  let zoneName: string;
+  let zoneRegion: string;
+  let etaHours = 23.5;
+  const vulnIndex = 8.4;
+
+  if (cLat >= 17.5 && cLat <= 20.0 && cLon <= 73.0) {
+    // Mumbai / Raigad Offshore Sector -> Murud-Janjira & Rajpuri Creek Coastline
+    coastLat = 18.298;
+    coastLon = 72.962;
+    zoneName = 'Murud-Janjira Artisanal Aquaculture & Fishing Grounds';
+    zoneRegion = 'Raigad Coastal Sector, Maharashtra';
+    etaHours = 23.5;
+  } else if (cLat >= 20.0 && cLat <= 23.5) {
+    // Gulf of Kutch / Saurashtra Coast
+    coastLat = 22.45;
+    coastLon = 69.80;
+    zoneName = 'Marine National Park & Gulf of Kutch Mangroves';
+    zoneRegion = 'Gujarat Coastal Sector';
+    etaHours = 18.0;
+  } else if (cLat >= 12.0 && cLat <= 14.5 && cLon >= 79.5) {
+    // Chennai Port / Coromandel
+    coastLat = 13.08;
+    coastLon = 80.28;
+    zoneName = 'Pulicat Lake & Ennore Estuary Marine Sanctuary';
+    zoneRegion = 'Tamil Nadu Coastal Sector';
+    etaHours = 16.0;
+  } else if (cLat >= 9.0 && cLat <= 12.0) {
+    // Kochi / Malabar
+    coastLat = 9.97;
+    coastLon = 76.24;
+    zoneName = 'Vembanad Estuary & Kochi Coastal Mangrove Belt';
+    zoneRegion = 'Kerala Coastal Sector';
+    etaHours = 20.0;
+  } else if (cLat >= 8.0 && cLat <= 22.0 && cLon < 77.0) {
+    // General West Coast of India
+    coastLat = cLat;
+    coastLon = 72.82 + Math.max(0, 19.0 - cLat) * 0.428;
+    zoneName = `${locationStr} Sensitive Coastal Belt`;
+    zoneRegion = `${locationStr} Coast`;
+    etaHours = 24.0;
+  } else {
+    coastLat = cLat;
+    coastLon = cLon + 0.45;
+    zoneName = `${locationStr} Coastal Intercept Zone`;
+    zoneRegion = `${locationStr} Sector`;
+    etaHours = 24.0;
+  }
+
+  const distKm = Number((Math.hypot(coastLat - cLat, (coastLon - cLon) * Math.cos(cLat * Math.PI / 180)) * 111.0).toFixed(1));
+
+  return {
+    name: zoneName,
+    region: zoneRegion,
+    distanceOffshoreKm: distKm,
+    projectedEtaHours: etaHours,
+    riskLevel: 'HIGH',
+    protocolTier: 'Tier-1 (NOSDCP Activated)',
+    vulnerabilityIndex: vulnIndex,
+    coordinates: [Number(coastLat.toFixed(4)), Number(coastLon.toFixed(4))],
+    vulnerableAssets: [
+      { name: `${zoneName} Traditional Fisheries`, type: 'Marine Fisheries', sensitivity: 'CRITICAL' },
+      { name: 'Rajpuri Creek Mangrove Nursery & Oyster Beds', type: 'Ecological Reserve', sensitivity: 'CRITICAL' },
+      { name: 'Alibaug Artisan Aquaculture Cages', type: 'Coastal Aquaculture', sensitivity: 'HIGH' }
+    ],
+    immediateActions: [
+      { id: 'act-1', text: `Deploy 800m offshore heavy-duty containment booms along ${zoneName} inlet`, completed: false, priority: 'CRITICAL' },
+      { id: 'act-2', text: 'Issue urgent VHF advisory (Ch-16) to artisanal fishing fleets in coastal zone', completed: true, priority: 'HIGH' },
+      { id: 'act-3', text: 'Dispatch ICG Interceptor Craft (C-432) with dynamic disk skimmers to T+12h drift waypoint', completed: false, priority: 'CRITICAL' },
+      { id: 'act-4', text: 'Alert Maharashtra Pollution Control Board (MPCB) rapid shoreline sampling squad', completed: false, priority: 'HIGH' }
+    ]
+  };
+}
+
 export const apiService = {
   // Check if real FastAPI backend is online
   async checkBackendHealth(): Promise<{ online: boolean; latencyMs: number }> {
@@ -185,10 +261,10 @@ export const apiService = {
             lng: pt.lon,
             timestampUtc: pt.timestamp ? pt.timestamp.replace('2026-09-01T', '').replace('2026-09-07T', '').replace('Z', ' UTC') : '02:47 UTC',
             speedKt: pt.sog || 11.4,
-            headingDeg: pt.heading || 125
+            headingDeg: pt.heading || 168
           }));
 
-          const lastPt = waypoints[waypoints.length - 1] || { lat: cLat, lng: cLon, speedKt: 11.4, headingDeg: 125 };
+          const lastPt = waypoints[waypoints.length - 1] || { lat: cLat, lng: cLon, speedKt: 11.4, headingDeg: 168 };
 
           return {
             id: `VSL-${track.mmsi || idx + 1}`,
@@ -303,24 +379,7 @@ export const apiService = {
           mode: 'LIVE METOCEAN'
         } : PRIMARY_METOCEAN;
 
-        const shorelineRisk: ShorelineRiskZone = {
-          name: `${locationStr} Sensitive Coastal Zone`,
-          region: `${locationStr} Maritime Sector`,
-          distanceOffshoreKm: Number((Math.hypot(cLat - origLat, cLon - origLon) * 111 + 6.5).toFixed(1)),
-          projectedEtaHours: 14.5,
-          riskLevel: 'HIGH',
-          protocolTier: 'TIER-2 REGIONAL ACTIVATION',
-          vulnerabilityIndex: 8.5,
-          coordinates: [Number((cLat - 0.05).toFixed(4)), Number((cLon + 0.08).toFixed(4))],
-          vulnerableAssets: [
-            { name: `${locationStr} Nearshore Fishery & Marine Habitat`, type: 'Fisheries & Marine Habitat', sensitivity: 'CRITICAL' },
-            { name: `${locationStr} Navigation Channel & Port Access`, type: 'Commercial Navigation Corridor', sensitivity: 'HIGH' }
-          ],
-          immediateActions: [
-            { id: 'ACT-1', text: 'Pre-position nearshore deflection booms along sensitive coastal inlets', completed: true, priority: 'CRITICAL' },
-            { id: 'ACT-2', text: 'Alert Regional Maritime Search & Rescue / Coast Guard Command', completed: false, priority: 'HIGH' }
-          ]
-        };
+        const shorelineRisk = computeShorelineRiskZone(cLat, cLon, locationStr);
 
         return {
           incident,
@@ -437,10 +496,10 @@ export const apiService = {
             lng: pt.lon,
             timestampUtc: pt.timestamp ? pt.timestamp.replace('2026-09-01T', '').replace('2026-09-07T', '').replace('Z', ' UTC') : '02:47 UTC',
             speedKt: pt.sog || 11.4,
-            headingDeg: pt.heading || 125
+            headingDeg: pt.heading || 168
           }));
 
-          const lastPt = waypoints[waypoints.length - 1] || { lat, lng: lon, speedKt: 11.4, headingDeg: 125 };
+          const lastPt = waypoints[waypoints.length - 1] || { lat, lng: lon, speedKt: 11.4, headingDeg: 168 };
           const distKm = cand?.evidence?.proximity_km !== undefined 
             ? Number(cand.evidence.proximity_km.toFixed(1))
             : Number((Math.hypot(lastPt.lat - oLat, lastPt.lng - oLon) * 111).toFixed(1));

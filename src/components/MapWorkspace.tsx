@@ -68,119 +68,38 @@ function interpolateAlongTrack(
   return { pos: [last.lat, last.lng], heading: last.headingDeg || 0 };
 }
 
-// Synchronized 4D track position and heading calculator for suspect and candidate vessels
+// Synchronized AIS position resolver: strictly reflects observed AIS transponder telemetry
 function getVesselPositionAtTime(
   vessel: Vessel,
-  t: number,
-  originCoordinates?: [number, number]
+  t: number
 ): { pos: [number, number]; heading: number } {
-  const o1: [number, number] = originCoordinates || vessel.currentCoordinates || [18.065, 72.395];
-  const o2: [number, number] = [o1[0] - 0.015, o1[1] + 0.020];
+  const track = vessel.track;
 
-  const vName = (vessel.name || '').toUpperCase();
-  const isSuspect1 = vessel.rank === 1 || vName.includes('OCEAN STAR') || vName.includes('VESSEL A') || vessel.id === 'ves-01';
-  const isSuspect2 = (vessel.rank === 2 || vName.includes('GULF VOYAGER') || vName.includes('VESSEL B') || vessel.id === 'ves-02') && !isSuspect1;
-
-  if (isSuspect1) {
-    const entryPt: [number, number] = [Number((o1[0] + 0.115).toFixed(5)), Number((o1[1] - 0.115).toFixed(5))];
-    const nowPt: [number, number] = vessel.currentCoordinates || [Number((o1[0] - 0.170).toFixed(5)), Number((o1[1] + 0.170).toFixed(5))];
-    const baseHeading = vessel.currentHeadingDeg || 125;
-
-    // 1. Pre-discharge entry regime: [-360 min to -300 min] (Clean sea, vessel navigates to origin)
-    if (t <= -300) {
-      if (t <= -360) return { pos: entryPt, heading: baseHeading };
-      const frac = Math.max(0, Math.min(1, (t - (-360)) / 60));
-      const lat = entryPt[0] + (o1[0] - entryPt[0]) * frac;
-      const lng = entryPt[1] + (o1[1] - entryPt[1]) * frac;
-      return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading };
-    }
-
-    // 2. Post-discharge past regime: [-300 min to 0 min] (Vessel navigates away from origin to present AIS position)
-    if (t <= 0) {
-      const frac = Math.max(0, Math.min(1, (t - (-300)) / 300));
-      const lat = o1[0] + (nowPt[0] - o1[0]) * frac;
-      const lng = o1[1] + (nowPt[1] - o1[1]) * frac;
-      return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading };
-    }
-
-    // 3. Forward Forecast regime: [0 min to +2880 min / +48h]
-    const hours = t / 60;
-    const speedKt = vessel.currentSpeedKt || 11.4;
-    const distKm = speedKt * 1.852 * hours;
-    const headingRad = (baseHeading * Math.PI) / 180;
-    const dLat = (distKm * Math.cos(headingRad)) / 111.0;
-    const dLng = (distKm * Math.sin(headingRad)) / (111.0 * Math.cos((nowPt[0] * Math.PI) / 180));
-    const projectedLat = Number((nowPt[0] + dLat).toFixed(5));
-    const projectedLng = Number((nowPt[1] + dLng).toFixed(5));
-    return { pos: [projectedLat, projectedLng], heading: baseHeading };
+  if (!track || track.length === 0) {
+    const coords = vessel.currentCoordinates || [0, 0];
+    return { pos: [coords[0], coords[1]], heading: vessel.currentHeadingDeg || 0 };
   }
 
-  if (isSuspect2) {
-    const entryPt2: [number, number] = [Number((o2[0] - 0.090).toFixed(5)), Number((o2[1] + 0.075).toFixed(5))];
-    const nowPt2: [number, number] = vessel.currentCoordinates || [Number((o2[0] + 0.180).toFixed(5)), Number((o2[1] - 0.155).toFixed(5))];
-    const baseHeading2 = vessel.currentHeadingDeg || 310;
-
-    // 1. Pre-discharge entry regime: [-360 min to -300 min]
-    if (t <= -300) {
-      if (t <= -360) return { pos: entryPt2, heading: baseHeading2 };
-      const frac = Math.max(0, Math.min(1, (t - (-360)) / 60));
-      const lat = entryPt2[0] + (o2[0] - entryPt2[0]) * frac;
-      const lng = entryPt2[1] + (o2[1] - entryPt2[1]) * frac;
-      return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading2 };
-    }
-
-    // 2. Post-discharge past regime: [-300 min to 0 min]
-    if (t <= 0) {
-      const frac = Math.max(0, Math.min(1, (t - (-300)) / 300));
-      const lat = o2[0] + (nowPt2[0] - o2[0]) * frac;
-      const lng = o2[1] + (nowPt2[1] - o2[1]) * frac;
-      return { pos: [Number(lat.toFixed(5)), Number(lng.toFixed(5))], heading: baseHeading2 };
-    }
-
-    // 3. Forward Forecast regime: [0 min to +2880 min / +48h]
-    const hours = t / 60;
-    const speedKt = vessel.currentSpeedKt || 10.8;
-    const distKm = speedKt * 1.852 * hours;
-    const headingRad = (baseHeading2 * Math.PI) / 180;
-    const dLat = (distKm * Math.cos(headingRad)) / 111.0;
-    const dLng = (distKm * Math.sin(headingRad)) / (111.0 * Math.cos((nowPt2[0] * Math.PI) / 180));
-    const projectedLat = Number((nowPt2[0] + dLat).toFixed(5));
-    const projectedLng = Number((nowPt2[1] + dLng).toFixed(5));
-    return { pos: [projectedLat, projectedLng], heading: baseHeading2 };
-  }
-
-  // Generic fallback for any other vessels in candidate table
-  const rawTrack = vessel.track;
-  if (!rawTrack || rawTrack.length === 0) {
-    return { pos: vessel.currentCoordinates || o1, heading: vessel.currentHeadingDeg || 0 };
-  }
-
-  const track = rawTrack.map(pt => ({ ...pt }));
-  const half = Math.max(0, Math.floor(track.length / 2));
-
-  if (t <= -300) {
-    const entryFrac = Math.max(0, Math.min(1, (t - (-360)) / 60));
-    const preTrack = track.slice(0, half + 1);
-    return interpolateAlongTrack(preTrack, entryFrac);
-  }
-
-  if (t <= 0) {
-    const postFrac = Math.max(0, Math.min(1, (t - (-300)) / 300));
-    const postTrack = track.slice(half);
-    return interpolateAlongTrack(postTrack, postFrac);
-  }
-
-  const hours = t / 60;
   const lastPt = track[track.length - 1];
-  const baseHeading = vessel.currentHeadingDeg ?? (lastPt.headingDeg || 135);
-  const speedKt = vessel.currentSpeedKt || 11.4;
-  const distKm = speedKt * 1.852 * hours;
-  const headingRad = (baseHeading * Math.PI) / 180;
-  const dLat = (distKm * Math.cos(headingRad)) / 111.0;
-  const dLng = (distKm * Math.sin(headingRad)) / (111.0 * Math.cos((lastPt.lat * Math.PI) / 180));
-  const projectedLat = Number((lastPt.lat + dLat).toFixed(5));
-  const projectedLng = Number(Math.min(72.76, lastPt.lng + dLng).toFixed(5));
-  return { pos: [projectedLat, projectedLng], heading: baseHeading };
+  const firstPt = track[0];
+
+  // At present or forward forecast times (t >= 0): display the exact latest observed AIS transponder position
+  if (t >= 0) {
+    return {
+      pos: vessel.currentCoordinates || [lastPt.lat, lastPt.lng],
+      heading: vessel.currentHeadingDeg ?? (lastPt.headingDeg || 0)
+    };
+  }
+
+  // Pre-event (prior to first recorded AIS broadcast): hold at first known AIS waypoint
+  if (t <= -360) {
+    return { pos: [firstPt.lat, firstPt.lng], heading: firstPt.headingDeg || vessel.currentHeadingDeg || 0 };
+  }
+
+  // Historical hindcast window (-360 min to 0 min): interpolate directly between verified AIS waypoints
+  const frac = Math.max(0, Math.min(1, (t - (-360)) / 360));
+  const interpolated = interpolateAlongTrack(track, frac);
+  return { pos: [interpolated.pos[0], interpolated.pos[1]], heading: interpolated.heading };
 }
 
 interface MapWorkspaceProps {
@@ -1064,30 +983,14 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
       vessels.forEach((vessel, vIndex) => {
         if (hiddenVesselIds.includes(vessel.id)) return;
         const isSelected = selectedVessel?.id === vessel.id;
-        const isSuspect1 = vessel.rank === 1 || vessel.name.toUpperCase().includes('OCEAN STAR') || vessel.name.toUpperCase().includes('VESSEL A') || vIndex === 0;
-        const isSuspect2 = isDualSpillScenario && (vessel.rank === 2 || vessel.name.toUpperCase().includes('GULF VOYAGER') || vessel.name.toUpperCase().includes('VESSEL B') || vIndex === 1) && !isSuspect1;
+        const isSuspect1 = vessel.rank === 1 || vIndex === 0;
+        const isSuspect2 = isDualSpillScenario && (vessel.rank === 2 || vIndex === 1) && !isSuspect1;
         const isRelevant = vessel.attributionScore >= 70;
         const isDimmed = selectedVessel !== null && !isSelected && !isSuspect1 && !isSuspect2;
 
         // Draw Ship Navigation Path with Directional Chevrons
         if ((layerState.vesselTracks || isSelected || isSuspect1 || isSuspect2) && vessel.track && vessel.track.length > 1) {
-          let trackCoords: [number, number][] = vessel.track.map(t => [t.lat, t.lng] as [number, number]);
-          if (isSuspect1) {
-            trackCoords = [
-              [Number((origin1Coords[0] + 0.115).toFixed(5)), Number((origin1Coords[1] - 0.115).toFixed(5))], // 01:42 UTC - Entry (North-West)
-              [Number((origin1Coords[0] + 0.057).toFixed(5)), Number((origin1Coords[1] - 0.057).toFixed(5))], // 02:18 UTC - Mid-transit
-              [origin1Coords[0], origin1Coords[1]], // 02:47 UTC - Probable Origin 1 (Discharge Event)
-              [Number((origin1Coords[0] - 0.085).toFixed(5)), Number((origin1Coords[1] + 0.085).toFixed(5))], // 03:30 UTC - Post-discharge
-              [vessel.currentCoordinates?.[0] || Number((origin1Coords[0] - 0.170).toFixed(5)), vessel.currentCoordinates?.[1] || Number((origin1Coords[1] + 0.170).toFixed(5))], // 04:32 UTC - Present position (South-East)
-            ];
-          } else if (isSuspect2) {
-            trackCoords = [
-              [Number((origin2Coords[0] - 0.090).toFixed(5)), Number((origin2Coords[1] + 0.075).toFixed(5))], // 01:40 UTC - Entry (South-East)
-              [origin2Coords[0], origin2Coords[1]], // 02:35 UTC - Probable Origin 2 (Discharge Event)
-              [Number((origin2Coords[0] + 0.090).toFixed(5)), Number((origin2Coords[1] - 0.075).toFixed(5))], // 03:20 UTC - Northbound transit
-              [vessel.currentCoordinates?.[0] || Number((origin2Coords[0] + 0.180).toFixed(5)), vessel.currentCoordinates?.[1] || Number((origin2Coords[1] - 0.155).toFixed(5))]  // 04:32 UTC - Present position (North-West)
-            ];
-          }
+          const trackCoords: [number, number][] = vessel.track.map(t => [t.lat, t.lng]);
           
           const baseTrackColor = isSuspect1 ? '#00E5FF' : (isSuspect2 ? '#C084FC' : '#8B5CF6');
           const trackColor = isSelected ? (isSuspect2 ? '#E879F9' : '#00E5FF') : baseTrackColor;
@@ -1104,9 +1007,9 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
 
           const trackTooltip = `
             <div style="font-family: 'Inter', sans-serif; font-size: 11px; background: rgba(7, 15, 29, 0.96); backdrop-filter: blur(8px); padding: 6px 10px; border: 1.5px solid ${trackColor}; border-radius: 6px; color: #F0F9FA; box-shadow: 0 4px 16px rgba(0,0,0,0.85);">
-              <strong style="color: ${trackColor}; font-family: monospace;">${isSuspect1 ? 'SHIP #1 TRAJECTORY' : (isSuspect2 ? 'SHIP #2 TRAJECTORY' : 'VESSEL TRACK')}</strong><br/>
+              <strong style="color: ${trackColor}; font-family: monospace;">${isSuspect1 ? 'PRIMARY SUSPECT TRAJECTORY' : (isSuspect2 ? 'SECONDARY SUSPECT TRAJECTORY' : 'VESSEL TRACK')}</strong><br/>
               ${vessel.name} (${vessel.type})<br/>
-              Heading: ${vessel.currentHeadingDeg || (isSuspect1 ? 125 : 310)}° · Speed: ${vessel.currentSpeedKt} kn · Attribution: ${vessel.attributionScore}%
+              Heading: ${vessel.currentHeadingDeg || 0}° · Speed: ${vessel.currentSpeedKt} kn · Attribution: ${vessel.attributionScore}%
             </div>
           `;
           shipPolyline.bindTooltip(trackTooltip, { sticky: true });
@@ -1134,40 +1037,28 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
             L.marker(mid, { icon: chevronIcon, interactive: false }).addTo(group);
           }
 
-          // Dedicated Separated Route Badges (Positioned at extreme ends so they NEVER overlap!)
-          if (isSuspect1) {
-            const labelPos1: [number, number] = [Number((origin1Coords[0] + 0.115).toFixed(5)), Number((origin1Coords[1] - 0.115).toFixed(5))]; // Top-left extremity
-            const badgeIcon1 = L.divIcon({
-              className: 'vessel-route-label-1 !bg-transparent !border-0',
+          // Dedicated Trajectory Label at track origin
+          if (isSuspect1 || isSuspect2) {
+            const labelPos = trackCoords[0];
+            const badgeColor = isSuspect1 ? '#00E5FF' : '#C084FC';
+            const badgeRank = vessel.rank || (isSuspect1 ? 1 : 2);
+            const badgeIcon = L.divIcon({
+              className: `vessel-route-label-${badgeRank} !bg-transparent !border-0`,
               html: `
-                <div style="background: rgba(7, 15, 29, 0.92); backdrop-filter: blur(6px); border: 1.2px solid #00E5FF; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #00E5FF; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none;">
-                  <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #00E5FF;"></span>
-                  <span>TRAJECTORY #1 · ${vessels[0]?.name?.toUpperCase() || 'SUSPECT #1'}</span>
+                <div style="background: rgba(7, 15, 29, 0.92); backdrop-filter: blur(6px); border: 1.2px solid ${badgeColor}; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: ${badgeColor}; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none;">
+                  <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: ${badgeColor};"></span>
+                  <span>TRAJECTORY #${badgeRank} · ${vessel.name?.toUpperCase()}</span>
                 </div>
               `,
               iconSize: [220, 20],
               iconAnchor: [110, 10],
             });
-            L.marker(labelPos1, { icon: badgeIcon1, interactive: false }).addTo(group);
-          } else if (isSuspect2) {
-            const labelPos2: [number, number] = [Number((origin2Coords[0] - 0.090).toFixed(5)), Number((origin2Coords[1] + 0.075).toFixed(5))]; // Bottom-right extremity (separated from Label 1)
-            const badgeIcon2 = L.divIcon({
-              className: 'vessel-route-label-2 !bg-transparent !border-0',
-              html: `
-                <div style="background: rgba(7, 15, 29, 0.92); backdrop-filter: blur(6px); border: 1.2px solid #C084FC; border-radius: 4px; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #C084FC; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.8); white-space: nowrap; pointer-events: none;">
-                  <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #C084FC;"></span>
-                  <span>TRAJECTORY #2 · ${vessels[1]?.name?.toUpperCase() || 'SUSPECT #2'}</span>
-                </div>
-              `,
-              iconSize: [220, 20],
-              iconAnchor: [110, 10],
-            });
-            L.marker(labelPos2, { icon: badgeIcon2, interactive: false }).addTo(group);
+            L.marker(labelPos, { icon: badgeIcon, interactive: false }).addTo(group);
           }
         }
 
         // Time-interpolated vessel position
-        const { pos: currentPos, heading } = getVesselPositionAtTime(vessel, currentTimeSimulationMinutes, hindcast?.originCoordinates);
+        const { pos: currentPos, heading } = getVesselPositionAtTime(vessel, currentTimeSimulationMinutes);
         const shipFillColor = isSuspect1 ? '#EF4444' : (isSuspect2 ? '#C084FC' : (isRelevant ? '#00E5FF' : '#94A3B8'));
 
         const vesselIcon = L.divIcon({
@@ -1232,65 +1123,25 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
     }
 
     // -------------------------------------------------------------
-    // 6. COASTAL CITY LABELS & SEA WATERMARK (from reference image)
+    // 6. METOCEAN WIND & DRIFT VECTOR OVERLAY (Dynamic from live MetOcean telemetry)
     // -------------------------------------------------------------
-    if (incident.coordinates[0] > 17 && incident.coordinates[0] < 20) {
-      // Mumbai coastal city markers
-      const coastalCities = [
-        { name: 'Mumbai', coords: [18.96, 72.82] as [number, number] },
-        { name: 'JNPT', coords: [18.95, 72.95] as [number, number] },
-        { name: 'Alibag', coords: [18.64, 72.87] as [number, number] }
-      ];
-
-      coastalCities.forEach(city => {
-        const cityIcon = L.divIcon({
-          className: 'city-label-marker !bg-transparent !border-0',
-          html: `
-            <div style="display: flex; align-items: center; gap: 4px; pointer-events: none; white-space: nowrap;">
-              <span style="display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #F8FAFC; box-shadow: 0 0 6px rgba(255,255,255,0.8);"></span>
-              <span style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #E2E8F0; text-shadow: 0 1px 4px rgba(0,0,0,0.95);">${city.name}</span>
-            </div>
-          `,
-          iconSize: [60, 16],
-          iconAnchor: [2, 8]
-        });
-        L.marker(city.coords, { icon: cityIcon, interactive: false }).addTo(group);
-      });
-
-      // Arabian Sea watermark
-      const seaIcon = L.divIcon({
-        className: 'sea-watermark !bg-transparent !border-0',
+    if (metocean && metocean.windDirectionDeg !== undefined && incident.coordinates) {
+      const windAngle = metocean.windDirectionDeg;
+      const windSpeedKt = metocean.windSpeedKt || 12;
+      const cPos = incident.coordinates;
+      // Single clean live meteorological vector badge near slick
+      const windBadge = L.divIcon({
+        className: 'live-metocean-vector !bg-transparent !border-0',
         html: `
-          <div style="font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 700; color: rgba(56, 189, 248, 0.25); letter-spacing: 0.15em; text-transform: uppercase; pointer-events: none; font-style: italic;">
-            Arabian Sea
+          <div style="background: rgba(7, 15, 29, 0.88); backdrop-filter: blur(6px); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 4px; padding: 2px 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #00E5FF; display: flex; align-items: center; gap: 4px; pointer-events: none; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.6);">
+            <span style="transform: rotate(${windAngle}deg); display: inline-block; font-size: 11px;">➔</span>
+            <span>WIND ${windSpeedKt} kn · ${metocean.windDirectionCard || ''} (${windAngle}°)</span>
           </div>
         `,
-        iconSize: [140, 24],
-        iconAnchor: [70, 12]
+        iconSize: [160, 18],
+        iconAnchor: [80, 9]
       });
-      L.marker([18.25, 72.05], { icon: seaIcon, interactive: false }).addTo(group);
-
-      // Subtle Wind / Ocean Current arrows
-      const windVectors: [number, number][] = [
-        [18.35, 72.25],
-        [18.28, 72.45],
-        [18.15, 72.30],
-        [18.05, 72.65],
-        [17.95, 72.48]
-      ];
-      windVectors.forEach(pos => {
-        const arrowIcon = L.divIcon({
-          className: 'wind-arrow !bg-transparent !border-0',
-          html: `
-            <div style="transform: rotate(65deg); color: rgba(0, 229, 255, 0.45); font-size: 13px; font-weight: bold; pointer-events: none;">
-              ➔
-            </div>
-          `,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7]
-        });
-        L.marker(pos, { icon: arrowIcon, interactive: false }).addTo(group);
-      });
+      L.marker([cPos[0] + 0.08, cPos[1] - 0.08], { icon: windBadge, interactive: false }).addTo(group);
     }
 
   }, [
@@ -1566,9 +1417,9 @@ export const MapWorkspace: React.FC<MapWorkspaceProps> = ({
             </div>
 
             {(() => {
-              const simState = getVesselPositionAtTime(displayVessel, currentTimeSimulationMinutes, hindcast?.originCoordinates);
+              const simState = getVesselPositionAtTime(displayVessel, currentTimeSimulationMinutes);
               const curPos = simState.pos;
-              const curHeading = simState.heading || displayVessel.currentHeadingDeg || 125;
+              const curHeading = simState.heading || displayVessel.currentHeadingDeg || 168;
               const targetOrig = displayVessel.rank === 2 ? origin2Coords : origin1Coords;
               const distFromOrig = Number((Math.hypot(curPos[0] - targetOrig[0], (curPos[1] - targetOrig[1]) * Math.cos(targetOrig[0] * Math.PI / 180)) * 111.0).toFixed(1));
 

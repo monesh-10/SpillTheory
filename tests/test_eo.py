@@ -9,6 +9,7 @@ warnings.filterwarnings('ignore')
 
 from pathlib import Path
 import numpy as np
+import pytest
 
 from eo.model import (
     IN_CHANNELS,
